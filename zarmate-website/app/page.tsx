@@ -1,103 +1,169 @@
-import Image from "next/image";
+// app/page.tsx
+"use client";
 
-export default function Home() {
-  return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+import Link from "next/link";
+import { motion } from "framer-motion";
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
-  );
+export default function HomePage() {
+	const features = [
+		{
+			title: "Create & Manage Wallet via WhatsApp",
+			desc: "No private keys to manage. Wallets tied to your user account.",
+		},
+		{
+			title: "Send & Receive Money",
+			desc: "Instant ZAR transfers to friends and merchants on campus.",
+		},
+		{
+			title: "Earn Rewards",
+			desc: "Get paid for attending class, recycling, or completing surveys.",
+		},
+		{
+			title: "Claim Promotions",
+			desc: "Redeem coupons for food, drinks, and campus deals.",
+		},
+		{
+			title: "Check Balance & History",
+			desc: "Quickly see your ZAR and recent transactions.",
+		},
+		{
+			title: "Pay via QR Code",
+			desc: "Scan and pay instantly at campus merchants.",
+		},
+	];
+
+	return (
+		<main className="min-h-screen bg-gradient-to-b from-[#041827] via-[#082733] to-[#041827] text-gray-100">
+			<nav className="max-w-6xl mx-auto px-6 py-6 flex items-center justify-between">
+				<div className="flex items-center gap-3">
+					<div className="w-10 h-10 rounded-lg bg-gradient-to-br from-cyan-400 to-blue-500 flex items-center justify-center font-bold text-[#02202b]">
+						ZM
+					</div>
+					<div className="font-semibold text-lg">ZarMate</div>
+				</div>
+
+				<div className="hidden md:flex items-center gap-6">
+					<Link href="/about" className="hover:text-cyan-300">
+						About
+					</Link>
+					<Link href="/signup" className="hover:text-cyan-300">
+						Sign Up
+					</Link>
+					<Link href="/login" className="hover:text-cyan-300">
+						Login
+					</Link>
+					<a href="#features" className="hover:text-cyan-300">
+						Features
+					</a>
+				</div>
+
+				<div className="md:hidden">
+					{/* simple mobile placeholder for menu */}
+					<Link
+						href="/signup"
+						className="bg-cyan-500 px-3 py-2 rounded-md text-sm"
+					>
+						Get Started
+					</Link>
+				</div>
+			</nav>
+
+			{/* Hero */}
+			<section className="relative text-center py-24 px-6 overflow-hidden">
+				<motion.div
+					initial={{ opacity: 0, y: -10 }}
+					animate={{ opacity: 1, y: 0 }}
+					transition={{ duration: 0.7 }}
+				>
+					<h1 className="text-5xl md:text-6xl font-extrabold bg-gradient-to-r from-cyan-300 to-blue-300 bg-clip-text text-transparent mb-4">
+						Payments, Rewards, and More — All on WhatsApp
+					</h1>
+					<p className="mb-8 text-lg md:text-xl max-w-3xl mx-auto text-gray-300">
+						ZarMate turns your WhatsApp into a ZAR stablecoin wallet. Send
+						money, earn rewards, and pay instantly — no app needed.
+					</p>
+
+					<div className="flex items-center justify-center gap-4">
+						<Link
+							href="/signup"
+							className="bg-cyan-500 hover:bg-cyan-600 transition-colors text-[#02202b] font-semibold px-6 py-3 rounded-full shadow-lg"
+						>
+							Sign Up
+						</Link>
+						<Link
+							href="/about"
+							className="text-sm text-gray-300 underline underline-offset-4"
+						>
+							Learn more
+						</Link>
+					</div>
+				</motion.div>
+			</section>
+
+			{/* Features */}
+			<section id="features" className="py-16 px-6 max-w-6xl mx-auto">
+				<motion.h2
+					initial={{ opacity: 0 }}
+					whileInView={{ opacity: 1 }}
+					viewport={{ once: true }}
+					className="text-3xl md:text-4xl font-bold text-center mb-12"
+				>
+					What You Can Do with ZarMate
+				</motion.h2>
+
+				<div className="grid md:grid-cols-3 gap-8">
+					{features.map((f, i) => (
+						<motion.div
+							key={i}
+							initial={{ opacity: 0, y: 20 }}
+							whileInView={{ opacity: 1, y: 0 }}
+							viewport={{ once: true }}
+							transition={{ delay: i * 0.08 }}
+							className="p-6 bg-[#082733] border border-[#123a45] rounded-xl shadow hover:shadow-2xl transition-shadow"
+						>
+							<h3 className="font-semibold text-xl mb-2 text-cyan-300">
+								{f.title}
+							</h3>
+							<p className="text-gray-300">{f.desc}</p>
+						</motion.div>
+					))}
+				</div>
+			</section>
+
+			{/* CTA Banner */}
+			<section className="py-12 px-6">
+				<div className="max-w-4xl mx-auto bg-gradient-to-r from-[#072a36] to-[#073d47] p-8 rounded-2xl flex flex-col md:flex-row items-center gap-6 justify-between">
+					<div>
+						<h3 className="text-2xl font-bold">No app. Just WhatsApp.</h3>
+						<p className="text-gray-300">
+							Sign up and get your ZarMate wallet linked to your WhatsApp in
+							minutes.
+						</p>
+					</div>
+					<div>
+						<Link
+							href="/signup"
+							className="bg-cyan-500 hover:bg-cyan-600 px-5 py-3 rounded-md font-semibold text-[#02202b]"
+						>
+							Get Started
+						</Link>
+					</div>
+				</div>
+			</section>
+
+			{/* Footer */}
+			<footer className="bg-[#031018] text-gray-400 text-center py-6 mt-12">
+				<div className="max-w-6xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between">
+					<p className="text-sm">
+						© {new Date().getFullYear()} ZarMate. All rights reserved.
+					</p>
+					<div className="flex gap-4 mt-4 md:mt-0">
+						<Link href="/about">About</Link>
+						<Link href="/signup">Sign Up</Link>
+						<Link href="/login">Login</Link>
+					</div>
+				</div>
+			</footer>
+		</main>
+	);
 }
