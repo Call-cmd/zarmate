@@ -11,9 +11,11 @@ const client = axios.create({
 module.exports = {
   createUser: (data) => client.post("/users", data),
   enableGasForUser: (userId) => client.post(`/activate-pay/${userId}`, {}),
+  enableBusinessGas: () => client.post("/enable-gas", {}),
   mintFunds: (data) => client.post("/mint", data),
   transferFunds: (userId, data) => client.post(`/transfer/${userId}`, data),
   getBalance: (userId) => client.get(`/${userId}/balance`),
+  getBusinessFloat: () => client.get("/float"),
   getTransactions: (userId) => client.get(`/${userId}/transactions`),
   createCharge: (merchantId, data) =>
     client.post(`/charge/${merchantId}/create`, data),

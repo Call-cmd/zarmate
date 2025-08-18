@@ -18,29 +18,71 @@ app.get("/", (req, res) => {
   res.send("ZarMate API is running");
 });
 
+app.get("/check-business-balance", async (req, res) => {
+  try {
+    console.log("Checking business float/balance...");
+    const balance = await rapyd.getBusinessFloat();
+    res.json(balance.data);
+  } catch (err) {
+    console.error(
+      "ERROR checking business balance:",
+      err.response ? err.response.data : err.message
+    );
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post("/fund-my-business", async (req, res) => {
+  try {
+    console.log("Attempting to fund the business wallet with gas...");
+    const result = await rapyd.enableBusinessGas();
+    console.log("Business wallet funding initiated.");
+    res.json({
+      message: "Request to fund business wallet sent successfully.",
+      data: result.data,
+    });
+  } catch (err) {
+    console.error(
+      "ERROR funding business wallet:",
+      err.response ? err.response.data : err.message
+    );
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Helper function to create a delay
+const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
 app.post("/test-flow", async (req, res) => {
   try {
-    // Generate a unique email address for each test run
     const uniqueEmail = `testuser-${Date.now()}@example.com`;
     console.log(`Attempting to create user with email: ${uniqueEmail}`);
 
     const user = await rapyd.createUser({
-      email: uniqueEmail, // <-- Use the unique email here
+      email: uniqueEmail,
       firstName: "Test",
       lastName: "User",
     });
 
-    const userId = user.data.id;
-    const paymentId = user.data.paymentIdentifier;
+    const userId = user.data.user.id;
+    const paymentId = user.data.user.paymentIdentifier;
+    console.log(`User created with ID: ${userId}`);
 
-    // enable gas for the new user right after creation
     await rapyd.enableGasForUser(userId);
+    console.log(`Gas enabled for user: ${userId}. Waiting for funds to arrive...`);
+
+    
+    // Wait for 10 seconds to allow the gas transaction to complete on the backend
+    await delay(10000);
+    console.log("10 seconds have passed. Attempting to mint funds...");
+    // --------------------
 
     await rapyd.mintFunds({
       transactionAmount: 50,
       transactionRecipient: paymentId,
       transactionNotes: "Welcome bonus",
     });
+    console.log(`50 funds minted for user: ${userId}`);
 
     const balance = await rapyd.getBalance(userId);
 
@@ -51,8 +93,10 @@ app.post("/test-flow", async (req, res) => {
       balance: balance.data,
     });
   } catch (err) {
-    // Log the full error for better debugging on the server side
-    console.error("ERROR in /test-flow:", err);
+    console.error(
+      "ERROR in /test-flow:",
+      err.response ? err.response.data : err.message
+    );
     res.status(500).json({ error: err.message });
   }
 });
