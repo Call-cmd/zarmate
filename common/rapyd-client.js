@@ -4,15 +4,17 @@ const client = axios.create({
   baseURL: process.env.RAPYD_BASE_URL,
   headers: {
     Authorization: `Bearer ${process.env.RAPYD_API_KEY}`,
-    "Content-Type": "application/json"
-  }
+    "Content-Type": "application/json",
+  },
 });
 
 module.exports = {
   createUser: (data) => client.post("/users", data),
+  enableGasForUser: (userId) => client.post(`/activate-pay/${userId}`, {}),
   mintFunds: (data) => client.post("/mint", data),
   transferFunds: (userId, data) => client.post(`/transfer/${userId}`, data),
   getBalance: (userId) => client.get(`/${userId}/balance`),
   getTransactions: (userId) => client.get(`/${userId}/transactions`),
-  createCharge: (merchantId, data) => client.post(`/charge/${merchantId}/create`, data),
+  createCharge: (merchantId, data) =>
+    client.post(`/charge/${merchantId}/create`, data),
 };
