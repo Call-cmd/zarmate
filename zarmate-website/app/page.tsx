@@ -38,10 +38,10 @@ export default function HomePage() {
 			<nav className="max-w-6xl mx-auto px-6 py-6 flex items-center justify-between">
 				<div className="flex items-center gap-3">
 					<Image
-						src="/logo.png" // <--- The path to your logo file
+						src="/logo1.png" // <--- The path to your logo file
 						alt="ZarMate Logo"
-						width={40} // <--- Adjust these values based on your logo design
-						height={40} // <--- Adjust these values based on your logo design
+						width={60} // <--- Adjust these values based on your logo design
+						height={60} // <--- Adjust these values based on your logo design
 						className="rounded-lg" // Optional: Keep this if your logo needs rounded corners, or remove it.
 					/>
 					<div className="font-semibold text-lg">ZarMate</div>
