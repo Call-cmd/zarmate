@@ -26,10 +26,11 @@ app.post("/test-flow", async (req, res) => {
       lastName: "User",
     });
 
-    // The API might not return a `data` object in the top-level response
-    // Let's assume the user object itself is what we need.
-    // Adjust this based on the actual API response structure.
+    const userId = user.data.id;
     const paymentId = user.data.paymentIdentifier;
+
+    // enable gas for the new user right after creation
+    await rapyd.enableGasForUser(userId);
 
     await rapyd.mintFunds({
       transactionAmount: 50,
@@ -37,10 +38,11 @@ app.post("/test-flow", async (req, res) => {
       transactionNotes: "Welcome bonus",
     });
 
-    const balance = await rapyd.getBalance(user.data.id);
+    const balance = await rapyd.getBalance(userId);
 
     res.json({
-      userId: user.data.id,
+      message: "User created, gas enabled, and funds minted successfully.",
+      userId: userId,
       paymentIdentifier: paymentId,
       balance: balance.data,
     });
