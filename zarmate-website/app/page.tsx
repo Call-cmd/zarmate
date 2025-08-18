@@ -3,6 +3,7 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
+import Image from "next/image"
 
 export default function HomePage() {
 	const features = [
@@ -36,9 +37,13 @@ export default function HomePage() {
 		<main className="min-h-screen bg-gradient-to-b from-[#041827] via-[#082733] to-[#041827] text-gray-100">
 			<nav className="max-w-6xl mx-auto px-6 py-6 flex items-center justify-between">
 				<div className="flex items-center gap-3">
-					<div className="w-10 h-10 rounded-lg bg-gradient-to-br from-cyan-400 to-blue-500 flex items-center justify-center font-bold text-[#02202b]">
-						ZM
-					</div>
+					<Image
+						src="/logo.png" // <--- The path to your logo file
+						alt="ZarMate Logo"
+						width={40} // <--- Adjust these values based on your logo design
+						height={40} // <--- Adjust these values based on your logo design
+						className="rounded-lg" // Optional: Keep this if your logo needs rounded corners, or remove it.
+					/>
 					<div className="font-semibold text-lg">ZarMate</div>
 				</div>
 
