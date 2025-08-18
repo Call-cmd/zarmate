@@ -20,8 +20,12 @@ app.get("/", (req, res) => {
 
 app.post("/test-flow", async (req, res) => {
   try {
+    // Generate a unique email address for each test run
+    const uniqueEmail = `testuser-${Date.now()}@example.com`;
+    console.log(`Attempting to create user with email: ${uniqueEmail}`);
+
     const user = await rapyd.createUser({
-      email: "test@123example.com",
+      email: uniqueEmail, // <-- Use the unique email here
       firstName: "Test",
       lastName: "User",
     });
