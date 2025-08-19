@@ -1,5 +1,6 @@
 // app/layout.tsx
-import "./globals.css"; // Make sure you have a globals.css file for Tailwind directives
+import "./globals.css";
+import { ThemeProvider } from "./providers"; // Import the provider
 
 export const metadata = {
 	title: "ZarMate",
@@ -12,8 +13,17 @@ export default function RootLayout({
 	children: React.ReactNode;
 }) {
 	return (
-		<html lang="en">
-			<body>{children}</body>
+		<html lang="en" suppressHydrationWarning>
+			<body>
+				<ThemeProvider
+					attribute="class"
+					defaultTheme="dark" // Set dark as the default
+					enableSystem
+					disableTransitionOnChange
+				>
+					{children}
+				</ThemeProvider>
+			</body>
 		</html>
 	);
 }
