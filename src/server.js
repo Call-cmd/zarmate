@@ -2,6 +2,13 @@
 require("dotenv").config();
 const express = require("express");
 const bodyParser = require("body-parser");
+const { saveUser } = require("./services/database.service"); // Import DB service
+
+// --- Routers ---
+const merchantRoutes = require("./api/merchants.routes");
+const whatsappRoutes = require("./api/whatsapp.routes");
+
+
 
 // --- DEBUGGING: Check if your environment variables are loaded ---
 console.log("RAPYD_API_KEY:", process.env.RAPYD_API_KEY ? "Loaded" : "NOT FOUND");
@@ -12,6 +19,38 @@ console.log(
 // ----------------------------------------------------------------
 
 const rapyd = require("../common/rapyd-client");
+
+// --- API Routes ---
+app.use("/api/merchants", merchantRoutes);
+app.use("/api/whatsapp", whatsappRoutes);
+
+// --- Add Dummy Data for Testing ---
+function setupTestData() {
+  console.log("Setting up test data...");
+  // Student 1: Sam
+  saveUser({
+    id: "user_sam_123", // This would come from the Rapyd API
+    paymentIdentifier: "pid_sam_abc", // This would also come from Rapyd
+    handle: "@sam",
+    whatsappNumber: "27820000001", // Use your own number for testing
+  });
+  // Student 2: Lebo
+  saveUser({
+    id: "user_lebo_456",
+    paymentIdentifier: "pid_lebo_def",
+    handle: "@lebo",
+    whatsappNumber: "27820000002",
+  });
+  // Merchant: Campus Cafe
+  saveUser({
+    id: "merchant_cafe_789",
+    paymentIdentifier: "pid_cafe_ghi",
+    handle: "@campuscafe",
+    whatsappNumber: "27820000003",
+  });
+  console.log("Test data loaded.");
+}
+
 
 const app = express();
 app.use(bodyParser.json());
@@ -135,6 +174,7 @@ app.post("/test-flow", async (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () =>
+app.listen(PORT, () => {
   console.log(`ZarMate backend running on port ${PORT}`)
-);
+  setupTestData();
+});
