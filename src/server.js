@@ -3,7 +3,6 @@ require("dotenv").config();
 const express = require("express");
 const bodyParser = require("body-parser");
 const { initializeDatabase, saveUser, } = require("./services/database.service"); // Import DB service
-
 // --- Routers ---
 const merchantRoutes = require("./api/merchants.routes");
 const whatsappRoutes = require("./api/whatsapp.routes");
@@ -25,24 +24,21 @@ app.use("/api/merchants", merchantRoutes);
 app.use("/api/whatsapp", whatsappRoutes);
 
 // --- Add Dummy Data for Testing ---
-function setupTestData() {
+async function setupTestData() {
   console.log("Setting up test data...");
-  // Student 1: Sam
-  saveUser({
-    id: "user_sam_123", // This would come from the Rapyd API
-    paymentIdentifier: "pid_sam_abc", // This would also come from Rapyd
+  await saveUser({
+    id: "user_sam_123",
+    paymentIdentifier: "pid_sam_abc",
     handle: "@sam",
-    whatsappNumber: "27820000001", // Use your own number for testing
+    whatsappNumber: "27820000001",
   });
-  // Student 2: Lebo
-  saveUser({
+  await saveUser({
     id: "user_lebo_456",
     paymentIdentifier: "pid_lebo_def",
     handle: "@lebo",
     whatsappNumber: "27820000002",
   });
-  // Merchant: Campus Cafe
-  saveUser({
+  await saveUser({
     id: "merchant_cafe_789",
     paymentIdentifier: "pid_cafe_ghi",
     handle: "@campuscafe",

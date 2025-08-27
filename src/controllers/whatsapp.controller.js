@@ -1,5 +1,5 @@
-const db = require("../services/database.service");
-const whatsapp = require("../services/whatsapp.service");
+const db = require("../../services/database.service");
+const whatsapp = require("../../services/whatsapp.service");
 const { executeTransfer } = require("./transaction.controller");
 
 const handleIncomingMessage = async (req, res) => {
