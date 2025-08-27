@@ -2,7 +2,7 @@
 require("dotenv").config();
 const express = require("express");
 const bodyParser = require("body-parser");
-const { saveUser } = require("./services/database.service"); // Import DB service
+const { initializeDatabase, saveUser, } = require("./services/database.service"); // Import DB service
 
 // --- Routers ---
 const merchantRoutes = require("./api/merchants.routes");
@@ -174,7 +174,10 @@ app.post("/test-flow", async (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(`ZarMate backend running on port ${PORT}`)
-  setupTestData();
+  // Initialize the database tables
+  await initializeDatabase();
+  // Setup test data
+  await setupTestData();
 });

@@ -28,10 +28,9 @@ async function executeTransfer(
 
     // Update the charge status if this is a QR payment
     if (chargeId) {
-      const charge = db.findChargeById(chargeId);
+      const charge = await db.findChargeById(chargeId);
       if (charge) {
-        charge.status = "COMPLETED";
-        db.saveCharge(charge);
+        await db.updateChargeStatus(chargeId, "COMPLETED");
       }
     }
 
