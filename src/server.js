@@ -19,9 +19,20 @@ console.log(
 
 const rapyd = require("../common/rapyd-client");
 
-// --- API Routes ---
+// 1. CREATE THE EXPRESS APP INSTANCE FIRST
+const app = express();
+
+// 2. APPLY MIDDLEWARE
+app.use(bodyParser.json());
+
+// 3. DEFINE API ROUTES
 app.use("/api/merchants", merchantRoutes);
 app.use("/api/whatsapp", whatsappRoutes);
+
+// 4. DEFINE ANY OTHER TOP-LEVEL ROUTES
+app.get("/", (req, res) => {
+  res.send("ZarMate API is running!");
+});
 
 // --- Add Dummy Data for Testing ---
 async function setupTestData() {
@@ -48,12 +59,6 @@ async function setupTestData() {
 }
 
 
-const app = express();
-app.use(bodyParser.json());
-
-app.get("/", (req, res) => {
-  res.send("ZarMate API is running");
-});
 
 // This endpoint seems fine as is, assuming it's a quick operation.
 app.get("/check-business-balance", async (req, res) => {

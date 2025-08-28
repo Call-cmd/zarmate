@@ -1,6 +1,6 @@
 const rapyd = require("../../common/rapyd-client");
-const db = require("../../services/database.service");
-const whatsapp = require("../../services/whatsapp.service");
+const db = require("../services/database.service");
+const whatsapp = require("../services/whatsapp.service");
 
 /**
  * The actual background job that performs a transfer and sends notifications.

@@ -1,5 +1,5 @@
 const { v4: uuidv4 } = require("uuid"); // Install with `npm install uuid`
-const db = require("../../services/database.service");
+const db = require("../services/database.service");
 
 const createCharge = (req, res) => {
   const { merchantId, amount, notes } = req.body;
