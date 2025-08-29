@@ -3,12 +3,14 @@
 // Make sure this is the VERY FIRST line to load environment variables
 require("dotenv").config();
 const express = require("express");
+const cors = require("cors");
 const { initializeDatabase } = require("./services/database.service");
 
 // --- Routers ---
 const merchantRoutes = require("./api/merchants.routes");
 const whatsappRoutes = require("./api/whatsapp.routes");
 const userRoutes = require("./api/users.routes");
+const dashboardRoutes = require("./api/dashboard.routes");
 
 console.log("RAPYD_API_KEY:", process.env.RAPYD_API_KEY ? "Loaded" : "NOT FOUND");
 console.log(
@@ -20,13 +22,14 @@ console.log(
 const app = express();
 
 // 2. APPLY MIDDLEWARE
-// THIS IS THE MOST IMPORTANT LINE. It MUST come before app.use('/api', ...)
+app.use(cors());
 app.use(express.json());
 
 // 3. DEFINE API ROUTES
 app.use("/api/merchants", merchantRoutes);
 app.use("/api/whatsapp", whatsappRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/dashboard", dashboardRoutes);
 
 // 4. DEFINE A SIMPLE TOP-LEVEL ROUTE for health checks
 app.get("/", (req, res) => {

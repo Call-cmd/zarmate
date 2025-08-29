@@ -30,7 +30,7 @@ async function executeTransfer(
     if (chargeId) {
       const charge = await db.findChargeById(chargeId);
       if (charge) {
-        await db.updateChargeStatus(chargeId, "COMPLETED");
+        await db.updateChargeStatus(chargeId, "COMPLETED", sender);
       }
     }
 

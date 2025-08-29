@@ -6,6 +6,9 @@ const db = require("../config/db");
  */
 const initializeDatabase = async () => {
   try {
+
+    
+
     // Create the 'users' table
     await db.query(`
       CREATE TABLE IF NOT EXISTS users (
@@ -21,12 +24,13 @@ const initializeDatabase = async () => {
     await db.query(`
       CREATE TABLE IF NOT EXISTS charges (
         id VARCHAR(255) PRIMARY KEY,
-        merchant_id VARCHAR(255) NOT NULL,
+        merchant_id VARCHAR(255) NOT NULL REFERENCES users(id),
+        customer_id VARCHAR(255) REFERENCES users(id), -- Can be NULL initially
+        customer_handle VARCHAR(50), -- Can be NULL initially
         amount NUMERIC(10, 2) NOT NULL,
         notes TEXT,
         status VARCHAR(20) DEFAULT 'PENDING',
-        created_at TIMESTAMPTZ DEFAULT NOW(),
-        FOREIGN KEY (merchant_id) REFERENCES users(id)
+        created_at TIMESTAMPTZ DEFAULT NOW()
       );
     `);
     console.log("✅ Database tables checked/created successfully.");
@@ -86,12 +90,61 @@ const findChargeById = async (chargeId) => {
 };
 
 // We need a new function to update the status of a charge
-const updateChargeStatus = async (chargeId, status) => {
-  await db.query("UPDATE charges SET status = $1 WHERE id = $2", [
-    status,
-    chargeId,
-  ]);
+const updateChargeStatus = async (chargeId, status, customer = null) => {
+  let query;
+  let params;
+  if (customer) {
+    query = `UPDATE charges SET status = $1, customer_id = $2, customer_handle = $3 WHERE id = $4`;
+    params = [status, customer.id, customer.handle, chargeId];
+  } else {
+    query = `UPDATE charges SET status = $1 WHERE id = $2`;
+    params = [status, chargeId];
+  }
+  await db.query(query, params);
   console.log(`[DB] Updated charge ${chargeId} status to ${status}`);
+};
+
+const getMerchantDashboardStats = async (merchantId) => {
+  const query = `
+    SELECT
+      (SELECT SUM(amount) FROM charges WHERE merchant_id = $1 AND status = 'COMPLETED') as pending_settlement,
+      (SELECT COUNT(*) FROM charges WHERE merchant_id = $1) as total_transactions,
+      (SELECT COUNT(DISTINCT customer_id) FROM charges WHERE merchant_id = $1) as unique_customers
+  `;
+  const res = await db.query(query, [merchantId]);
+  return res.rows[0];
+};
+
+const getTransactionsForMerchant = async (merchantId) => {
+  const query = `
+    SELECT
+      id,
+      created_at,
+      customer_handle,
+      amount,
+      status
+    FROM charges
+    WHERE merchant_id = $1
+    ORDER BY created_at DESC;
+  `;
+  const res = await db.query(query, [merchantId]);
+  return res.rows;
+};
+
+const getCustomersForMerchant = async (merchantId) => {
+  const query = `
+    SELECT
+      customer_handle,
+      COUNT(*) as transaction_count,
+      SUM(amount) as total_spent,
+      MAX(created_at) as last_seen
+    FROM charges
+    WHERE merchant_id = $1 AND customer_handle IS NOT NULL
+    GROUP BY customer_handle
+    ORDER BY total_spent DESC;
+  `;
+  const res = await db.query(query, [merchantId]);
+  return res.rows;
 };
 
 module.exports = {
@@ -103,4 +156,7 @@ module.exports = {
   saveCharge,
   findChargeById,
   updateChargeStatus,
+  getMerchantDashboardStats,
+  getTransactionsForMerchant,
+  getCustomersForMerchant,
 };

@@ -14,11 +14,27 @@ export default function SignupPage() {
 		e.preventDefault();
 		setStatus("Signing you up...");
 
+		// --- 1. Prepare the data for the backend ---
+		const nameParts = name.trim().split(/\s+/);
+		const firstName = nameParts[0];
+		const lastName = nameParts.slice(1).join(" ") || "User"; // Handle single names
+
+		// Create a simple handle from the name (e.g., "John Smith" -> "@johnsmith")
+		const handle = `@${name.trim().toLowerCase().replace(/\s+/g, "")}`;
+
+		const payload = {
+		  handle,
+		  whatsappNumber: phone,
+		  email,
+		  firstName,
+		  lastName,
+		};
+
 		try {
-			const res = await fetch("/api/signup", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ name, phone, email }),
+	      const res = await fetch("http://localhost:3000/api/users/register", {
+        	method: "POST",
+        	headers: { "Content-Type": "application/json" },
+        	body: JSON.stringify(payload),
 			});
 			if (res.ok) {
 				setStatus("✅ Success! Check your WhatsApp for your welcome message.");
