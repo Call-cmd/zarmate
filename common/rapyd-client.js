@@ -6,6 +6,7 @@ const client = axios.create({
     Authorization: `Bearer ${process.env.RAPYD_API_KEY}`,
     "Content-Type": "application/json",
   },
+
 });
 
 module.exports = {

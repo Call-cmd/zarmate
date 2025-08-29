@@ -65,13 +65,18 @@ const findUserByHandle = async (handle) => {
   return res.rows[0] || null;
 };
 
+const findUserById = async (userId) => {
+  const res = await db.query("SELECT * FROM users WHERE id = $1", [userId]);
+  return res.rows[0] || null;
+};
+
 const saveCharge = async (charge) => {
-  const { id, merchantId, amount, notes } = charge;
+  const { id, merchant_id, amount, notes } = charge;
   const query = `
     INSERT INTO charges (id, merchant_id, amount, notes)
     VALUES ($1, $2, $3, $4);
   `;
-  await db.query(query, [id, merchantId, amount, notes]);
+  await db.query(query, [id, merchant_id, amount, notes]);
   console.log(`[DB] Saved charge: ${id}`);
 };
 
@@ -94,6 +99,7 @@ module.exports = {
   saveUser,
   findUserByWhatsapp,
   findUserByHandle,
+  findUserById,
   saveCharge,
   findChargeById,
   updateChargeStatus,

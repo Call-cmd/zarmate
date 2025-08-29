@@ -7,8 +7,10 @@ const handleIncomingMessage = async (req, res) => {
   const { from, text } = req.body;
   const message = text.trim().toLowerCase();
 
-  const sender = db.findUserByWhatsapp(from);
+  const sender = await db.findUserByWhatsapp(from);
   if (!sender) {
+    // We can now safely send a message back if the user isn't found
+    await whatsapp.sendMessage(from, "Sorry, your number is not registered.");
     return res.status(404).json({ error: "User not found" });
   }
 
@@ -33,17 +35,17 @@ const handleIncomingMessage = async (req, res) => {
   }
 
   // 2. QR Code Payment: "pay charge_12345"
-  const paymentMatch = message.match(/^pay\s+(charge_\w+-?\w+)/);
+  const paymentMatch = message.match(/^pay\s+(charge_[\w-]+)/);
   if (paymentMatch) {
     const chargeId = paymentMatch[1];
-    const charge = db.findChargeById(chargeId);
+    const charge = await db.findChargeById(chargeId);
 
     if (!charge || charge.status !== "PENDING") {
       await whatsapp.sendMessage(from, "Sorry, that payment code is invalid or has already been used.");
       return res.status(200).send("OK");
     }
 
-    const merchant = db.findUserByHandle(charge.merchantId); // Assuming merchantId is their handle
+    const merchant = await db.findUserById(charge.merchant_id);
     if (!merchant) {
       await whatsapp.sendMessage(from, "Sorry, the merchant for this payment could not be found.");
       return res.status(200).send("OK");
@@ -51,7 +53,14 @@ const handleIncomingMessage = async (req, res) => {
 
     // Respond immediately and start the job in the background
     await whatsapp.sendMessage(from, `Processing your payment of R${charge.amount} for "${charge.notes}"...`);
-    executeTransfer(sender, merchant, charge.amount, charge.notes, charge.id);
+
+    executeTransfer(
+      sender,
+      merchant,
+      parseFloat(charge.amount),
+      charge.notes,
+      charge.id
+    );
     return res.status(200).send("OK");
   }
 
