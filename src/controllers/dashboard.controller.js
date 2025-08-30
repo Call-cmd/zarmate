@@ -8,8 +8,6 @@ const getOverviewStats = async (req, res) => {
 
     // 1. Get LZAR Balance from Rapyd API
     const balancePromise = rapyd.getBalance(merchantId);
-
-    // 2. Get aggregated stats from our database
     const statsPromise = db.getMerchantDashboardStats(merchantId);
 
     const [balanceResponse, dbStats] = await Promise.all([
@@ -17,8 +15,25 @@ const getOverviewStats = async (req, res) => {
       statsPromise,
     ]);
 
+    // Start with a default balance of 0
+    //let lzarBalance = 0;
+    const tokens = balanceResponse?.data?.tokens;
+
+    // Check if the tokens array exists and has items
+    if (tokens && Array.isArray(tokens) && tokens.length > 0) {
+      // Find the specific token with the correct name
+      const zarToken = tokens.find(
+        (token) => token.name && token.name.toUpperCase() === "L ZAR COIN"
+      );
+
+      // If found, parse its balance string into a number
+      if (zarToken && zarToken.balance) {
+        lzarBalance = parseFloat(zarToken.balance);
+      }
+    }
+
     res.json({
-      lzarBalance: balanceResponse.data.balance || 0,
+      lzarBalance: lzarBalance,
       pendingSettlement: parseFloat(dbStats.pending_settlement) || 0,
       totalTransactions: parseInt(dbStats.total_transactions, 10) || 0,
       uniqueCustomers: parseInt(dbStats.unique_customers, 10) || 0,

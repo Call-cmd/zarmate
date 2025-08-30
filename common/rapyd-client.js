@@ -18,6 +18,7 @@ module.exports = {
   getBalance: (userId) => client.get(`/${userId}/balance`),
   getBusinessFloat: () => client.get("/float"),
   getTransactions: (userId) => client.get(`/${userId}/transactions`),
-  createCharge: (merchantId, data) =>
-    client.post(`/charge/${merchantId}/create`, data),
+  createCharge: (userId, data) => client.post(`/charge/${userId}/create`, data),
+  getCharge: (chargeId) => client.get(`/retrieve-charge/${chargeId}`),
+  updateCharge: (userId, chargeId, data) => client.put(`/charge/${userId}/${chargeId}/update`, data),
 };

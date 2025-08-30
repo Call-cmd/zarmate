@@ -18,20 +18,20 @@ async function executeTransfer(
     );
 
     // The actual API call to the blockchain service
-    await rapyd.transferFunds(sender.id, {
-      transactionAmount: amount,
-      transactionRecipient: recipient.paymentIdentifier,
-      transactionNotes: notes,
-    });
+    const transferResponse = await rapyd.transferFunds(sender.id, {
+                                                        transactionAmount: amount,
+                                                        transactionRecipient: recipient.paymentIdentifier,
+                                                        transactionNotes: notes,
+                                                      });
 
     console.log(`[Background] Transfer successful!`);
 
-    // Update the charge status if this is a QR payment
+    // --- STEP 3: UPDATE THE CHARGE STATUS WITH RAPYD API ---
     if (chargeId) {
-      const charge = await db.findChargeById(chargeId);
-      if (charge) {
-        await db.updateChargeStatus(chargeId, "COMPLETED", sender);
-      }
+      console.log(`Updating status for charge ${chargeId} to COMPLETE.`);
+      await rapyd.updateCharge(recipient.id, chargeId, {
+        status: "COMPLETE",
+      });
     }
 
     // Send success notifications

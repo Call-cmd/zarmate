@@ -1,5 +1,5 @@
-const { v4: uuidv4 } = require("uuid");
 const db = require("../services/database.service");
+const rapyd = require("../../common/rapyd-client");
 
 const createCharge = async (req, res) => {
   try {
@@ -11,39 +11,47 @@ const createCharge = async (req, res) => {
         .json({ error: "merchantId (handle) and amount are required" });
     }
 
-    // --- NEW LOGIC ---
-    // 1. Find the merchant in the users table using their handle.
     const merchant = await db.findUserByHandle(merchantHandle);
-
-    // 2. Check if the merchant actually exists.
     if (!merchant) {
       return res
-        .status(404) // 404 Not Found is the correct status code here
+        .status(404)
         .json({ error: `Merchant with handle '${merchantHandle}' not found.` });
     }
-    // --- END NEW LOGIC ---
 
-    const charge = {
-      id: `charge_${uuidv4()}`,
-      // 3. Use the merchant's actual primary key (merchant.id) for the foreign key.
-      merchant_id: merchant.id,
-      amount,
-      notes: notes || "Campus Store Purchase",
+    const chargePayload = {
+      paymentId: merchant.payment_identifier,
+      amount: amount,
+      note: notes,
     };
 
-    await db.saveCharge(charge);
+    const chargeResponse = await rapyd.createCharge(merchant.id, chargePayload);
 
-    console.log(
-      `Charge created: ${charge.id} for R${amount} by merchant ${merchant.id}`
-    );
+    // --- THIS IS THE FIX ---
+    // The Postman test proved the ID is at chargeResponse.data.charge.id
+    const chargeId = chargeResponse?.data?.charge?.id;
+
+    if (!chargeId) {
+      console.error(
+        "ERROR: Rapyd API did not return a charge ID in the expected format.",
+        JSON.stringify(chargeResponse.data)
+      );
+      return res
+        .status(500)
+        .json({ error: "Failed to create charge: API response was invalid." });
+    }
+
+    console.log(`Rapyd charge created: ${chargeId} for R${amount}`);
 
     res.status(201).json({
       message: "Charge created successfully.",
-      chargeId: charge.id,
-      qrContent: `pay ${charge.id}`,
+      chargeId: chargeId,
+      qrContent: `pay ${chargeId}`,
     });
   } catch (error) {
-    console.error("ERROR creating charge:", error);
+    console.error(
+      "ERROR creating charge:",
+      error.response ? error.response.data : error
+    );
     res.status(500).json({ error: "Failed to create charge." });
   }
 };
