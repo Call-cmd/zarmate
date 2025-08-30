@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/context/AuthContext"; // Import our custom auth hook
+import { useAuth } from "@/context/AuthContext";
 import { QRCodeSVG } from "qrcode.react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,23 +15,33 @@ import {
   LayoutDashboard,
   ArrowRightLeft,
   Users,
-  BarChart,
   Settings,
   QrCode,
   Banknote,
   LogOut,
   Loader2,
+  BarChart as BarChartIcon, // Renamed icon to avoid conflict
 } from "lucide-react";
 import Image from "next/image";
+import {
+  BarChart, // <-- CORRECT: This is the chart component from recharts
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Legend,
+} from "recharts";
 
-// --- Data Types from our API ---
+// --- Data Types ---
+type AnalyticsData = { date: string; total: number };
 type OverviewStats = {
   lzarBalance: number;
   pendingSettlement: number;
   totalTransactions: number;
   uniqueCustomers: number;
 };
-
 type Transaction = {
   id: string;
   created_at: string;
@@ -39,7 +49,6 @@ type Transaction = {
   amount: string;
   status: "Completed" | "Pending" | "Refunded";
 };
-
 type Customer = {
   customer_handle: string;
   transaction_count: string;
@@ -78,38 +87,47 @@ export default function MerchantDashboard() {
   const { user, token, loading: authLoading, logout } = useAuth();
   const router = useRouter();
 
+  // --- ALL STATE IN ONE PLACE ---
   const [activeItem, setActiveItem] = useState("Overview");
   const [stats, setStats] = useState<OverviewStats | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [analyticsData, setAnalyticsData] = useState<AnalyticsData[]>([]);
+  const [communityFund, setCommunityFund] = useState<number>(0);
   const [dataLoading, setDataLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
   const [chargeAmount, setChargeAmount] = useState("");
   const [chargeNotes, setChargeNotes] = useState("");
   const [generatedCharge, setGeneratedCharge] = useState<{
     id: string;
     qr: string;
   } | null>(null);
+  const [couponTitle, setCouponTitle] = useState("");
+  const [couponDesc, setCouponDesc] = useState("");
+  const [couponCode, setCouponCode] = useState("");
+  const [couponStatus, setCouponStatus] = useState("");
 
-// Effect 1: Handle Authentication. Redirect if not logged in.
+  // --- ONE UNIFIED useEffect FOR ALL DATA FETCHING ---
   useEffect(() => {
     if (!authLoading && !token) {
       router.push("/login");
+      return;
     }
-  }, [authLoading, token, router]);
 
-  // Effect 2: Fetch dashboard data only when the user is authenticated.
-  useEffect(() => {
     if (user && token) {
       const merchantId = user.id;
-
       async function fetchData() {
         setDataLoading(true);
         setError(null);
         try {
           const headers = { Authorization: `Bearer ${token}` };
-          const [statsRes, transactionsRes, customersRes] = await Promise.all([
+          const [
+            statsRes,
+            transactionsRes,
+            customersRes,
+            fundRes,
+            analyticsRes,
+          ] = await Promise.all([
             fetch(
               `http://localhost:3000/api/dashboard/merchant/${merchantId}/overview`,
               { headers }
@@ -122,15 +140,30 @@ export default function MerchantDashboard() {
               `http://localhost:3000/api/dashboard/merchant/${merchantId}/customers`,
               { headers }
             ),
+            fetch(`http://localhost:3000/api/dashboard/community-fund`, {
+              headers,
+            }),
+            fetch(
+              `http://localhost:3000/api/dashboard/merchant/${merchantId}/analytics`,
+              { headers }
+            ),
           ]);
 
-          if (!statsRes.ok || !transactionsRes.ok || !customersRes.ok) {
+          if (
+            !statsRes.ok ||
+            !transactionsRes.ok ||
+            !customersRes.ok ||
+            !fundRes.ok ||
+            !analyticsRes.ok
+          ) {
             throw new Error("Failed to fetch dashboard data");
           }
 
           setStats(await statsRes.json());
           setTransactions(await transactionsRes.json());
           setCustomers(await customersRes.json());
+          setCommunityFund((await fundRes.json()).balance);
+          setAnalyticsData(await analyticsRes.json());
         } catch (err) {
           setError(
             err instanceof Error ? err.message : "An unknown error occurred"
@@ -141,8 +174,9 @@ export default function MerchantDashboard() {
       }
       fetchData();
     }
-  }, [user, token]);
+  }, [user, token, authLoading, router]);
 
+  // --- ALL HANDLER FUNCTIONS ---
   const handleCreateCharge = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !token) return;
@@ -160,26 +194,62 @@ export default function MerchantDashboard() {
           notes: chargeNotes,
         }),
       });
-      if (!res.ok) throw new Error("Failed to create charge");
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || "Failed to create charge");
+      }
       const data = await res.json();
       setGeneratedCharge({ id: data.chargeId, qr: data.qrContent });
       setChargeAmount("");
       setChargeNotes("");
     } catch (error) {
       console.error("Error creating charge:", error);
-      alert("Failed to create payment request.");
+      alert(
+        error instanceof Error
+          ? error.message
+          : "Failed to create payment request."
+      );
     }
   };
 
-  const navItems = [
-    { name: "Overview", icon: LayoutDashboard },
-    { name: "Transactions", icon: ArrowRightLeft },
-    { name: "Customers", icon: Users },
-    { name: "Analytics", icon: BarChart },
-    { name: "Settings", icon: Settings },
-  ];
+  const handleCreateCoupon = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user || !token) return;
+    setCouponStatus("Creating coupon...");
+    try {
+      const payload = {
+        title: couponTitle,
+        description: couponDesc,
+        code: couponCode,
+      };
+      const res = await fetch(
+        `http://localhost:3000/api/dashboard/merchant/${user.id}/coupons`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(payload),
+        }
+      );
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || "Failed to create coupon");
+      }
+      setCouponStatus("✅ Coupon created successfully!");
+      setCouponTitle("");
+      setCouponDesc("");
+      setCouponCode("");
+    } catch (error) {
+      setCouponStatus(
+        error instanceof Error
+          ? `❌ ${error.message}`
+          : "Failed to create coupon."
+      );
+    }
+  };
 
-  // FIX #2: Ensure this function is complete and returns a string.
   const getBadgeClasses = (status: string): string => {
     switch (status) {
       case "Completed":
@@ -192,6 +262,14 @@ export default function MerchantDashboard() {
         return "bg-gray-100 text-gray-800 dark:bg-gray-500 dark:text-gray-50 border-gray-200 dark:border-gray-400";
     }
   };
+
+  const navItems = [
+    { name: "Overview", icon: LayoutDashboard },
+    { name: "Transactions", icon: ArrowRightLeft },
+    { name: "Customers", icon: Users },
+    { name: "Analytics", icon: BarChartIcon },
+    { name: "Settings", icon: Settings },
+  ];
 
   if (authLoading || dataLoading) {
     return (
@@ -262,7 +340,6 @@ export default function MerchantDashboard() {
                 currency: "ZAR",
               }) || "R0.00"
             }
-            // --- Display Total Transactions ---
             subtitle={`From ${stats?.totalTransactions || 0} total transactions`}
           />
           <StatCard
@@ -273,12 +350,16 @@ export default function MerchantDashboard() {
                 currency: "ZAR",
               }) || "R0.00"
             }
-            // --- Display Unique Customers ---
             subtitle={`From ${stats?.uniqueCustomers || 0} unique customers`}
           />
-          <Button className="h-full text-lg bg-cyan-500 hover:bg-cyan-600 text-white dark:text-[#02202b] font-semibold flex flex-col gap-2 transition-transform hover:translate-y-[-2px]">
-            <Banknote size={32} /> Withdraw to Bank
-          </Button>
+          <StatCard
+            title="Community Fund"
+            value={communityFund.toLocaleString("en-ZA", {
+              style: "currency",
+              currency: "ZAR",
+            })}
+            subtitle="Funded by user round-ups"
+          />
           <Button className="h-full text-lg bg-cyan-500 hover:bg-cyan-600 text-white dark:text-[#02202b] font-semibold flex flex-col gap-2 transition-transform hover:translate-y-[-2px]">
             <QrCode size={32} /> Receive Payment
           </Button>
@@ -289,6 +370,7 @@ export default function MerchantDashboard() {
             <TabsTrigger value="transactions">Transactions</TabsTrigger>
             <TabsTrigger value="customers">Customers</TabsTrigger>
             <TabsTrigger value="analytics">Analytics</TabsTrigger>
+            <TabsTrigger value="coupons">Coupons</TabsTrigger>
             <TabsTrigger value="receive">Receive Payment</TabsTrigger>
           </TabsList>
 
@@ -410,6 +492,52 @@ export default function MerchantDashboard() {
             </Card>
           </TabsContent>
 
+                    <TabsContent value="analytics" className="mt-4">
+            <Card className="bg-white dark:bg-[#082733] border-gray-200 dark:border-[#123a45]">
+              <CardHeader>
+                <CardTitle>Daily Sales Volume</CardTitle>
+              </CardHeader>
+              <CardContent className="h-[400px] w-full">
+                {analyticsData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={analyticsData}
+                      margin={{ top: 5, right: 20, left: -10, bottom: 5 }}
+                    >
+                      <CartesianGrid
+                        strokeDasharray="3 3"
+                        stroke="rgba(128, 128, 128, 0.2)"
+                      />
+                      <XAxis dataKey="date" stroke="#9ca3af" fontSize={12} />
+                      <YAxis stroke="#9ca3af" fontSize={12} />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: "#031018",
+                          borderColor: "#123a45",
+                        }}
+                        labelStyle={{ color: "#cbd5e1" }}
+                        formatter={(value) => [
+                          `R${Number(value).toFixed(2)}`,
+                          "Sales",
+                        ]}
+                      />
+                      <Legend />
+                      <Bar
+                        dataKey="total"
+                        name="Daily Sales (LZAR)"
+                        fill="#22d3ee"
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="flex items-center justify-center h-full text-gray-500">
+                    Not enough transaction data to display a chart.
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
           <TabsContent value="receive" className="mt-4">
             <Card className="bg-white dark:bg-[#082733] border-gray-200 dark:border-[#123a45]">
               <CardHeader>
@@ -460,6 +588,46 @@ export default function MerchantDashboard() {
                     </code>
                   </div>
                 )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="coupons" className="mt-4">
+            <Card className="bg-white dark:bg-[#082733] border-gray-200 dark:border-[#123a45]">
+              <CardHeader>
+                <CardTitle>Create a New Coupon</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handleCreateCoupon} className="space-y-4">
+                  <Input
+                    type="text"
+                    placeholder="Coupon Title (e.g., Free Coffee)"
+                    value={couponTitle}
+                    onChange={(e) => setCouponTitle(e.target.value)}
+                    required
+                    className="bg-gray-50 dark:bg-[#041827] border-gray-200 dark:border-[#123a45]"
+                  />
+                  <Input
+                    type="text"
+                    placeholder="Description (e.g., Get one free small coffee)"
+                    value={couponDesc}
+                    onChange={(e) => setCouponDesc(e.target.value)}
+                    required
+                    className="bg-gray-50 dark:bg-[#041827] border-gray-200 dark:border-[#123a45]"
+                  />
+                  <Input
+                    type="text"
+                    placeholder="Unique Code (e.g., ZARCOFFEE)"
+                    value={couponCode}
+                    onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                    required
+                    className="bg-gray-50 dark:bg-[#041827] border-gray-200 dark:border-[#123a45]"
+                  />
+                  <Button type="submit" className="w-full bg-cyan-500 hover:bg-cyan-600">
+                    Create Coupon
+                  </Button>
+                  {couponStatus && <p className="text-center text-sm mt-2">{couponStatus}</p>}
+                </form>
               </CardContent>
             </Card>
           </TabsContent>

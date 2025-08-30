@@ -92,9 +92,65 @@ const getCommunityFundBalance = async (req, res) => {
   }
 };
 
+const createMerchantCoupon = async (req, res) => {
+  try {
+    const { merchantId } = req.params;
+    // The body will contain title, description, code, etc.
+    const couponData = req.body;
+
+    // The API requires some fields that we can set defaults for
+    const payload = {
+      ...couponData,
+      ref: couponData.code, // Use the code as the reference
+      validUntil: "2025-12-31T23:59:59Z", // A default expiry for the hackathon
+      maxCoupons: 1000, // A high limit
+      availableCoupons: 1000,
+    };
+
+    await rapyd.createCoupon(merchantId, payload);
+
+    res.status(201).json({ message: "Coupon created successfully!" });
+  } catch (error) {
+    console.error("Error creating coupon:", error.response ? error.response.data : error);
+    res.status(500).json({ error: "Failed to create coupon." });
+  }
+};
+
+const getAnalyticsData = async (req, res) => {
+  try {
+    const { merchantId } = req.params;
+    const response = await rapyd.getTransactions(merchantId);
+    const transactions = response?.data?.transactions ?? [];
+
+    // Process the data: group transactions by day and sum the values
+    const dailyTotals = transactions.reduce((acc, tx) => {
+      // Only include successful "CREDIT" transactions (money received)
+      if (tx.txType.toUpperCase() === "CREDIT") {
+        const date = tx.createdAt.split("T")[0]; // Get 'YYYY-MM-DD'
+        const value = parseFloat(tx.value);
+        acc[date] = (acc[date] || 0) + value;
+      }
+      return acc;
+    }, {});
+
+    // Convert the processed object into an array suitable for charting
+    const chartData = Object.keys(dailyTotals).map((date) => ({
+      date,
+      total: dailyTotals[date],
+    })).sort((a, b) => new Date(a.date) - new Date(b.date)); // Sort by date
+
+    res.json(chartData);
+  } catch (error) {
+    console.error("Error fetching analytics data:", error);
+    res.status(500).json({ error: "Failed to fetch analytics data" });
+  }
+};
+
 module.exports = {
   getOverviewStats,
   getMerchantTransactions,
   getMerchantCustomers,
   getCommunityFundBalance,
+  createMerchantCoupon,
+  getAnalyticsData,
 };

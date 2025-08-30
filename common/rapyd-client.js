@@ -21,4 +21,7 @@ module.exports = {
   createCharge: (userId, data) => client.post(`/charge/${userId}/create`, data),
   getCharge: (chargeId) => client.get(`/retrieve-charge/${chargeId}`),
   updateCharge: (userId, chargeId, data) => client.put(`/charge/${userId}/${chargeId}/update`, data),
+  createCoupon: (userId, data) => client.post(`/coupons/${userId}`, data),
+  getAllCoupons: () => client.get("/coupons"),
+  claimCoupon: (userId, data) => client.patch(`/coupons/claim/${userId}`, data),
 };

@@ -23,4 +23,10 @@ router.get(
 // Endpoint to get the community fund balance
 router.get("/community-fund", dashboardController.getCommunityFundBalance);
 
+// Endpoint to create a coupon for a merchant
+router.post("/merchant/:merchantId/coupons", dashboardController.createMerchantCoupon);
+
+// Endpoint to get analytics data
+router.get("/merchant/:merchantId/analytics", dashboardController.getAnalyticsData);
+
 module.exports = router;

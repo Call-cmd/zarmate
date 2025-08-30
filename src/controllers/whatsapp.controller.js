@@ -111,6 +111,52 @@ if (message === "balance" || message === "bal") {
     return res.status(200).send("OK");
   }
 
+// --- COUPON CLAIM WITH DEMO MODE WORKAROUND ---
+const claimMatch = lowerCaseText.match(/^(claim|redeem)\s+([\w-]+)/i);
+if (claimMatch) {
+  const couponCode = claimMatch[2].toUpperCase();
+
+  try {
+    console.log(`User ${sender.id} attempting to claim coupon code: ${couponCode}`);
+    await whatsapp.sendMessage(from, `Checking code ${couponCode}...`);
+
+    // 1. Get all available coupons (this part works and proves the coupon is real)
+    const couponsResponse = await rapyd.getAllCoupons();
+    const allCoupons = couponsResponse.data;
+    const targetCoupon = allCoupons.find(c => c.code.toUpperCase() === couponCode);
+
+    if (!targetCoupon) {
+      await whatsapp.sendMessage(from, `Sorry, the coupon code "${couponCode}" is not valid.`);
+      return res.status(200).send("OK");
+    }
+
+    // --- DEMO MODE WORKAROUND ---
+    // The API's claim endpoint is bugged. We will simulate the claim
+    // by minting a reward directly to the user's account.
+    console.log(`Found coupon ID ${targetCoupon.id}. Simulating successful claim...`);
+
+    // The API doesn't specify a coupon value, so we'll hardcode one for the demo.
+    const couponValue = 10.00;
+
+    await rapyd.mintFunds({
+      transactionAmount: couponValue,
+      transactionRecipient: sender.payment_identifier,
+      transactionNotes: `Reward for claiming coupon: ${targetCoupon.code}`,
+    });
+
+    console.log(`Successfully minted R${couponValue} reward for user ${sender.id}`);
+    await whatsapp.sendMessage(from, `✅ Success! You have claimed the "${targetCoupon.title}" coupon. R${couponValue.toFixed(2)} has been added to your balance.`);
+    // --- END OF WORKAROUND ---
+
+  } catch (error) {
+    console.error(`Failed to claim coupon for user ${sender.id}:`, error.response ? error.response.data : error);
+    const errorMessage = "An unexpected error occurred while claiming your coupon.";
+    await whatsapp.sendMessage(from, `❌ Claim failed. ${errorMessage}`);
+  }
+  return res.status(200).send("OK");
+}
+  // --- END OF NEW BLOCK ---
+
 
   // --- Command Routing ---
 
