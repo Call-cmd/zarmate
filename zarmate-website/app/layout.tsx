@@ -7,23 +7,27 @@ export const metadata = {
 	description: "ZarMate — payments, rewards, and more via WhatsApp",
 };
 
-export default function RootLayout({
-	children,
-}: {
+import { AuthProvider } from "@/context/AuthContext"; // <-- Import
+
+export default function RootLayout(
+	{ children,
+}: { 
 	children: React.ReactNode;
 }) {
-	return (
-		<html lang="en" suppressHydrationWarning>
-			<body>
-				<ThemeProvider
+  return (
+    <html lang="en" suppressHydrationWarning>
+      <body>
+        <AuthProvider>
+			<ThemeProvider
 					attribute="class"
 					defaultTheme="dark" // Set dark as the default
 					enableSystem
 					disableTransitionOnChange
 				>
 					{children}
-				</ThemeProvider>
-			</body>
-		</html>
-	);
+			</ThemeProvider>
+		</AuthProvider>
+      </body>
+    </html>
+  );
 }

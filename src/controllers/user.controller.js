@@ -32,6 +32,7 @@ const registerUser = async (req, res) => {
       paymentIdentifier: officialPaymentId,
       handle: handle,
       whatsappNumber: whatsappNumber,
+      email: email,
     });
 
     // --- STEP 3: Kick off the background job for gas and bonus ---

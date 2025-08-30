@@ -11,6 +11,7 @@ const merchantRoutes = require("./api/merchants.routes");
 const whatsappRoutes = require("./api/whatsapp.routes");
 const userRoutes = require("./api/users.routes");
 const dashboardRoutes = require("./api/dashboard.routes");
+const authRoutes = require("./api/auth.routes");
 
 console.log("RAPYD_API_KEY:", process.env.RAPYD_API_KEY ? "Loaded" : "NOT FOUND");
 console.log(
@@ -30,6 +31,7 @@ app.use("/api/merchants", merchantRoutes);
 app.use("/api/whatsapp", whatsappRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/dashboard", dashboardRoutes);
+app.use("/api/auth", authRoutes);
 
 // 4. DEFINE A SIMPLE TOP-LEVEL ROUTE for health checks
 app.get("/", (req, res) => {

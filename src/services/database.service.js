@@ -16,6 +16,7 @@ const initializeDatabase = async () => {
         payment_identifier VARCHAR(255) NOT NULL,
         handle VARCHAR(50) UNIQUE NOT NULL,
         whatsapp_number VARCHAR(50) UNIQUE NOT NULL,
+        email VARCHAR(255) UNIQUE NOT NULL,
         created_at TIMESTAMPTZ DEFAULT NOW()
       );
     `);
@@ -39,21 +40,27 @@ const initializeDatabase = async () => {
   }
 };
 
+
+const findUserByEmail = async (email) => {
+  const res = await db.query("SELECT * FROM users WHERE email = $1", [email]);
+  return res.rows[0] || null;
+};
+
 /**
  * Saves or updates a user. Uses INSERT ON CONFLICT for an "upsert" operation.
  */
 const saveUser = async (user) => {
-  const { id, paymentIdentifier, handle, whatsappNumber } = user;
+  const { id, paymentIdentifier, handle, whatsappNumber, email } = user; // <-- Add email
   const query = `
-    INSERT INTO users (id, payment_identifier, handle, whatsapp_number)
-    VALUES ($1, $2, $3, $4)
+    INSERT INTO users (id, payment_identifier, handle, whatsapp_number, email)
+    VALUES ($1, $2, $3, $4, $5)
     ON CONFLICT (id) DO UPDATE SET
       payment_identifier = EXCLUDED.payment_identifier,
       handle = EXCLUDED.handle,
-      whatsapp_number = EXCLUDED.whatsapp_number;
+      whatsapp_number = EXCLUDED.whatsapp_number,
+      email = EXCLUDED.email;
   `;
-  // Using parameterized queries ($1, $2) prevents SQL injection attacks.
-  await db.query(query, [id, paymentIdentifier, handle, whatsappNumber]);
+  await db.query(query, [id, paymentIdentifier, handle, whatsappNumber, email]); // <-- Add email
   console.log(`[DB] Saved user: ${handle}`);
 };
 
@@ -153,6 +160,7 @@ module.exports = {
   findUserByWhatsapp,
   findUserByHandle,
   findUserById,
+  findUserByEmail,
   saveCharge,
   findChargeById,
   updateChargeStatus,

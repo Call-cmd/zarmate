@@ -1,6 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/context/AuthContext"; // Import our custom auth hook
+import { QRCodeSVG } from "qrcode.react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -72,14 +75,16 @@ const StatCard = ({
 );
 
 export default function MerchantDashboard() {
+  const { user, token, loading: authLoading, logout } = useAuth();
+  const router = useRouter();
+
   const [activeItem, setActiveItem] = useState("Overview");
   const [stats, setStats] = useState<OverviewStats | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [dataLoading, setDataLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // State for the "Receive Payment" tab
   const [chargeAmount, setChargeAmount] = useState("");
   const [chargeNotes, setChargeNotes] = useState("");
   const [generatedCharge, setGeneratedCharge] = useState<{
@@ -87,58 +92,70 @@ export default function MerchantDashboard() {
     qr: string;
   } | null>(null);
 
-  // In a real app, this ID would come from an authentication context (e.g., Clerk, NextAuth)
-  const merchantId = "merchant_cafe_789";
-  const merchantHandle = "@campuscafe";
-
+// Effect 1: Handle Authentication. Redirect if not logged in.
   useEffect(() => {
-    async function fetchData() {
-      setLoading(true);
-      setError(null);
-      try {
-        const [statsRes, transactionsRes, customersRes] = await Promise.all([
-          fetch(
-            `http://localhost:3000/api/dashboard/merchant/${merchantId}/overview`
-          ),
-          fetch(
-            `http://localhost:3000/api/dashboard/merchant/${merchantId}/transactions`
-          ),
-          fetch(
-            `http://localhost:3000/api/dashboard/merchant/${merchantId}/customers`
-          ),
-        ]);
-
-        if (!statsRes.ok || !transactionsRes.ok || !customersRes.ok) {
-          throw new Error("Failed to fetch dashboard data");
-        }
-
-        const statsData = await statsRes.json();
-        const transactionsData = await transactionsRes.json();
-        const customersData = await customersRes.json();
-
-        setStats(statsData);
-        setTransactions(transactionsData);
-        setCustomers(customersData);
-      } catch (err) {
-        setError(
-          err instanceof Error ? err.message : "An unknown error occurred"
-        );
-      } finally {
-        setLoading(false);
-      }
+    if (!authLoading && !token) {
+      router.push("/login");
     }
-    fetchData();
-  }, [merchantId]);
+  }, [authLoading, token, router]);
+
+  // Effect 2: Fetch dashboard data only when the user is authenticated.
+  useEffect(() => {
+    if (user && token) {
+      const merchantId = user.id;
+
+      async function fetchData() {
+        setDataLoading(true);
+        setError(null);
+        try {
+          const headers = { Authorization: `Bearer ${token}` };
+          const [statsRes, transactionsRes, customersRes] = await Promise.all([
+            fetch(
+              `http://localhost:3000/api/dashboard/merchant/${merchantId}/overview`,
+              { headers }
+            ),
+            fetch(
+              `http://localhost:3000/api/dashboard/merchant/${merchantId}/transactions`,
+              { headers }
+            ),
+            fetch(
+              `http://localhost:3000/api/dashboard/merchant/${merchantId}/customers`,
+              { headers }
+            ),
+          ]);
+
+          if (!statsRes.ok || !transactionsRes.ok || !customersRes.ok) {
+            throw new Error("Failed to fetch dashboard data");
+          }
+
+          setStats(await statsRes.json());
+          setTransactions(await transactionsRes.json());
+          setCustomers(await customersRes.json());
+        } catch (err) {
+          setError(
+            err instanceof Error ? err.message : "An unknown error occurred"
+          );
+        } finally {
+          setDataLoading(false);
+        }
+      }
+      fetchData();
+    }
+  }, [user, token]);
 
   const handleCreateCharge = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!user || !token) return;
     setGeneratedCharge(null);
     try {
       const res = await fetch("http://localhost:3000/api/merchants/charges", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({
-          merchantId: merchantHandle,
+          merchantId: user.handle,
           amount: parseFloat(chargeAmount),
           notes: chargeNotes,
         }),
@@ -162,7 +179,8 @@ export default function MerchantDashboard() {
     { name: "Settings", icon: Settings },
   ];
 
-  const getBadgeClasses = (status: string) => {
+  // FIX #2: Ensure this function is complete and returns a string.
+  const getBadgeClasses = (status: string): string => {
     switch (status) {
       case "Completed":
         return "bg-green-100 text-green-800 dark:bg-green-600 dark:text-green-50 border-green-200 dark:border-green-500";
@@ -175,7 +193,7 @@ export default function MerchantDashboard() {
     }
   };
 
-  if (loading) {
+  if (authLoading || dataLoading) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-white dark:bg-[#041827]">
         <Loader2 className="h-12 w-12 animate-spin text-cyan-500" />
@@ -183,44 +201,77 @@ export default function MerchantDashboard() {
     );
   }
 
-  if (error) {
-    return (
-      <div className="flex h-screen w-full items-center justify-center bg-white dark:bg-[#041827] text-red-500">
-        Error: {error}
-      </div>
-    );
-  }
+  if (!user) return null;
 
   return (
     <div className="flex h-screen bg-white dark:bg-gradient-to-b dark:from-[#041827] dark:via-[#082733] dark:to-[#041827] text-gray-900 dark:text-gray-100">
-      {/* Sidebar */}
       <aside className="w-64 bg-gray-100 dark:bg-[#031018] p-4 flex flex-col justify-between border-r border-gray-200 dark:border-gray-800">
-        {/* ... Sidebar content remains the same ... */}
+        <div>
+          <div className="flex items-center gap-3 mb-8">
+            <Image src="/logo1.png" alt="ZarMate Logo" width={40} height={40} />
+            <div className="font-semibold text-xl">ZarMate</div>
+          </div>
+          <nav className="flex flex-col gap-2">
+            {navItems.map((item) => (
+              <Button
+                key={item.name}
+                variant="ghost"
+                onClick={() => setActiveItem(item.name)}
+                className={`justify-start gap-3 px-3 transition-colors ${
+                  activeItem === item.name
+                    ? "bg-cyan-500/10 text-cyan-600 dark:bg-[#072f39] dark:text-cyan-300"
+                    : "hover:bg-gray-200 dark:hover:bg-[#082733] text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100"
+                }`}
+              >
+                <item.icon size={18} /> {item.name}
+              </Button>
+            ))}
+          </nav>
+        </div>
+        <Button
+          onClick={logout}
+          variant="ghost"
+          className="justify-start gap-3 px-3 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-[#082733] hover:text-red-500 dark:hover:text-red-400"
+        >
+          <LogOut size={18} /> Log Out
+        </Button>
       </aside>
 
-      {/* Main Content */}
       <main className="flex-1 p-8 overflow-y-auto">
-        {/* Header */}
         <header className="flex items-center justify-between mb-8">
-          {/* ... Header content remains the same ... */}
+          <div>
+            <h1 className="text-3xl font-bold">Merchant Dashboard</h1>
+            <p className="text-gray-500 dark:text-gray-400">
+              Welcome, {user.handle}!
+            </p>
+          </div>
+          <div className="flex items-center gap-4">
+            <ThemeToggle />
+            <div className="w-12 h-12 rounded-full bg-cyan-500 flex items-center justify-center font-bold text-xl text-[#02202b]">
+              {user.handle.substring(1, 3).toUpperCase()}
+            </div>
+          </div>
         </header>
 
-        {/* Stat Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <StatCard
             title="LZAR Balance"
-            value={stats?.lzarBalance.toLocaleString("en-ZA", {
-              style: "currency",
-              currency: "ZAR",
-            }) || "R0.00"}
+            value={
+              stats?.lzarBalance.toLocaleString("en-ZA", {
+                style: "currency",
+                currency: "ZAR",
+              }) || "R0.00"
+            }
             subtitle={`Total Transactions: ${stats?.totalTransactions || 0}`}
           />
           <StatCard
             title="Pending Settlement"
-            value={stats?.pendingSettlement.toLocaleString("en-ZA", {
-              style: "currency",
-              currency: "ZAR",
-            }) || "R0.00"}
+            value={
+              stats?.pendingSettlement.toLocaleString("en-ZA", {
+                style: "currency",
+                currency: "ZAR",
+              }) || "R0.00"
+            }
             subtitle={`From ${stats?.uniqueCustomers || 0} customers`}
           />
           <Button className="h-full text-lg bg-cyan-500 hover:bg-cyan-600 text-white dark:text-[#02202b] font-semibold flex flex-col gap-2 transition-transform hover:translate-y-[-2px]">
@@ -231,7 +282,6 @@ export default function MerchantDashboard() {
           </Button>
         </div>
 
-        {/* Main Tabs */}
         <Tabs defaultValue="transactions">
           <TabsList className="bg-gray-100 dark:bg-[#072f39] border border-gray-200 dark:border-[#123a45]">
             <TabsTrigger value="transactions">Transactions</TabsTrigger>
@@ -240,13 +290,31 @@ export default function MerchantDashboard() {
             <TabsTrigger value="receive">Receive Payment</TabsTrigger>
           </TabsList>
 
-          {/* Transactions Tab */}
           <TabsContent value="transactions" className="mt-4">
             <Card className="bg-white dark:bg-[#082733] border-gray-200 dark:border-[#123a45]">
-              <CardHeader>{/* ... Search Input ... */}</CardHeader>
+              <CardHeader>
+                <div className="relative">
+                  <Search
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                    size={18}
+                  />
+                  <Input
+                    placeholder="Search by customer, amount..."
+                    className="bg-gray-50 dark:bg-[#041827] border-gray-200 dark:border-[#123a45] focus:ring-cyan-400 pl-10"
+                  />
+                </div>
+              </CardHeader>
               <CardContent>
                 <table className="w-full text-left">
-                  {/* ... Table Head ... */}
+                  <thead className="bg-gray-50 dark:bg-[#041827]">
+                    <tr className="text-gray-500 dark:text-gray-400">
+                      <th className="p-4 font-medium">Date</th>
+                      <th className="p-4 font-medium">Customer</th>
+                      <th className="p-4 font-medium">Amount</th>
+                      <th className="p-4 font-medium">Status</th>
+                      <th className="p-4 font-medium text-right">Action</th>
+                    </tr>
+                  </thead>
                   <tbody>
                     {transactions.length > 0 ? (
                       transactions.map((tx) => (
@@ -279,7 +347,10 @@ export default function MerchantDashboard() {
                       ))
                     ) : (
                       <tr>
-                        <td colSpan={5} className="p-8 text-center text-gray-500">
+                        <td
+                          colSpan={5}
+                          className="p-8 text-center text-gray-500"
+                        >
                           No transactions found.
                         </td>
                       </tr>
@@ -290,12 +361,18 @@ export default function MerchantDashboard() {
             </Card>
           </TabsContent>
 
-          {/* Customers Tab */}
           <TabsContent value="customers" className="mt-4">
             <Card className="bg-white dark:bg-[#082733] border-gray-200 dark:border-[#123a45]">
               <CardContent className="pt-6">
                 <table className="w-full text-left">
-                  {/* ... Table Head ... */}
+                  <thead className="bg-gray-50 dark:bg-[#041827]">
+                    <tr className="text-gray-500 dark:text-gray-400">
+                      <th className="p-4 font-medium">Customer Handle</th>
+                      <th className="p-4 font-medium"># of Transactions</th>
+                      <th className="p-4 font-medium">Total Spent</th>
+                      <th className="p-4 font-medium">Last Seen</th>
+                    </tr>
+                  </thead>
                   <tbody>
                     {customers.length > 0 ? (
                       customers.map((c) => (
@@ -317,7 +394,10 @@ export default function MerchantDashboard() {
                       ))
                     ) : (
                       <tr>
-                        <td colSpan={4} className="p-8 text-center text-gray-500">
+                        <td
+                          colSpan={4}
+                          className="p-8 text-center text-gray-500"
+                        >
                           No customer data available.
                         </td>
                       </tr>
@@ -328,7 +408,6 @@ export default function MerchantDashboard() {
             </Card>
           </TabsContent>
 
-          {/* Receive Payment Tab */}
           <TabsContent value="receive" className="mt-4">
             <Card className="bg-white dark:bg-[#082733] border-gray-200 dark:border-[#123a45]">
               <CardHeader>
@@ -352,15 +431,27 @@ export default function MerchantDashboard() {
                     onChange={(e) => setChargeNotes(e.target.value)}
                     className="bg-gray-50 dark:bg-[#041827] border-gray-200 dark:border-[#123a45]"
                   />
-                  <Button type="submit" className="w-full bg-cyan-500 hover:bg-cyan-600">
+                  <Button
+                    type="submit"
+                    className="w-full bg-cyan-500 hover:bg-cyan-600"
+                  >
                     Generate Payment Code
                   </Button>
                 </form>
                 {generatedCharge && (
                   <div className="mt-6 p-4 bg-gray-50 dark:bg-[#041827] rounded-lg text-center">
                     <p className="font-semibold">Payment Code Generated!</p>
+                    <div className="my-4 flex justify-center bg-white p-4 rounded-lg max-w-xs mx-auto">
+                      <QRCodeSVG
+                        value={generatedCharge.qr}
+                        size={200}
+                        level={"H"}
+                        includeMargin={true}
+                      />
+                    </div>
                     <p className="text-sm text-gray-500">
-                      A customer can pay this by sending the following command on WhatsApp:
+                      Have the customer scan this code, or send the following
+                      command on WhatsApp:
                     </p>
                     <code className="block mt-2 p-2 bg-gray-200 dark:bg-black rounded font-mono text-cyan-600 dark:text-cyan-300">
                       {generatedCharge.qr}

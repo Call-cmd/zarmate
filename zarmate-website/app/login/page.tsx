@@ -3,17 +3,25 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useAuth } from "@/context/AuthContext";
 
 export default function LoginPage() {
 	const [identifier, setIdentifier] = useState("");
 	const [status, setStatus] = useState("");
+	const { login } = useAuth();
 
-	async function handleLogin(e: React.FormEvent) {
-		e.preventDefault();
-		setStatus("Logging in...");
-		// placeholder behavior — integrate with your auth system
-		setTimeout(() => setStatus("✅ Login flow not yet implemented."), 800);
-	}
+	 async function handleLogin(e: React.FormEvent) {
+    e.preventDefault();
+    setStatus("Logging in...");
+    try {
+      await login(identifier);
+      // The context handles redirection on success
+    } catch (error) {
+      setStatus(
+        error instanceof Error ? `❌ ${error.message}` : "❌ An error occurred"
+      );
+    }
+  }
 
 	return (
 		<main className="min-h-screen bg-gradient-to-b from-[#041827] via-[#082733] to-[#041827] text-gray-100 flex items-start py-16">
