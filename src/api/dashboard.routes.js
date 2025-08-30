@@ -20,4 +20,7 @@ router.get(
   dashboardController.getMerchantCustomers
 );
 
+// Endpoint to get the community fund balance
+router.get("/community-fund", dashboardController.getCommunityFundBalance);
+
 module.exports = router;

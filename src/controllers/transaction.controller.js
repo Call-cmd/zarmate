@@ -9,13 +9,21 @@ async function executeTransfer(
   notes,
   chargeId = null
 ) {
+
+  // --- NEW ROUND-UP LOGIC ---
+  const originalAmount = amount;
+  const roundedUpAmount = Math.ceil(originalAmount);
+  const contribution = roundedUpAmount - originalAmount;
+  // --- END NEW LOGIC ---
+
   try {
     console.log(
-      `[Background] Executing transfer of R${amount} from ${sender.id} to ${recipient.id}`
+      `[Background] Original amount: R${originalAmount}, Rounded-up: R${roundedUpAmount}, Contribution: R${contribution.toFixed(2)}`
     );
 
+    // We will now use the rounded-up amount for the main transfer
     const transferPayload = {
-      transactionAmount: amount,
+      transactionAmount: roundedUpAmount, // Charge the customer the full rounded-up amount
       transactionRecipient: recipient.payment_identifier,
       transactionNotes: notes,
     };
@@ -38,6 +46,26 @@ async function executeTransfer(
 
     console.log("[Background] Blockchain transaction confirmed successful.");
 
+
+    // --- NEW: If there's a contribution, transfer it to the community fund ---
+    if (contribution > 0) {
+      console.log(`[Background] Transferring R${contribution.toFixed(2)} to Community Fund.`);
+      // Find the community fund user in our database
+      const communityFundUser = await db.findUserByHandle("@communityfund");
+      if (communityFundUser) {
+        // This is a "fire and forget" transfer from the MERCHANT to the FUND.
+        // The merchant acts as a temporary holding account.
+        await rapyd.transferFunds(recipient.id, {
+          transactionAmount: contribution,
+          transactionRecipient: communityFundUser.payment_identifier,
+          transactionNotes: `Round-up from charge ${chargeId}`,
+        });
+        console.log("[Background] Contribution transfer successful.");
+      }
+    }
+    // --- END NEW LOGIC ---
+    
+
     if (chargeId) {
       console.log(`Updating status for charge ${chargeId} to COMPLETE.`);
       await rapyd.updateCharge(recipient.id, chargeId, {
@@ -45,13 +73,15 @@ async function executeTransfer(
       });
     }
 
+    // Notify the user of the full amount they paid
     await whatsapp.sendMessage(
       sender.whatsapp_number,
-      `✅ Transfer complete! You sent R${amount.toFixed(2)} to ${recipient.handle}.`
+      `✅ Transfer complete! You paid R${roundedUpAmount.toFixed(2)} to ${recipient.handle}. Thank you for your R${contribution.toFixed(2)} contribution to the community fund!`
     );
+    // The merchant is notified of the original amount
     await whatsapp.sendMessage(
       recipient.whatsapp_number,
-      `🎉 You received R${amount.toFixed(2)} from ${sender.handle}!`
+      `🎉 You received R${originalAmount.toFixed(2)} from ${sender.handle}!`
     );
   } catch (error) {
     console.error(

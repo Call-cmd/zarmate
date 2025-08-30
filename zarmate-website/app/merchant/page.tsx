@@ -262,7 +262,8 @@ export default function MerchantDashboard() {
                 currency: "ZAR",
               }) || "R0.00"
             }
-            subtitle={`Total Transactions: ${stats?.totalTransactions || 0}`}
+            // --- Display Total Transactions ---
+            subtitle={`From ${stats?.totalTransactions || 0} total transactions`}
           />
           <StatCard
             title="Pending Settlement"
@@ -272,7 +273,8 @@ export default function MerchantDashboard() {
                 currency: "ZAR",
               }) || "R0.00"
             }
-            subtitle={`From ${stats?.uniqueCustomers || 0} customers`}
+            // --- Display Unique Customers ---
+            subtitle={`From ${stats?.uniqueCustomers || 0} unique customers`}
           />
           <Button className="h-full text-lg bg-cyan-500 hover:bg-cyan-600 text-white dark:text-[#02202b] font-semibold flex flex-col gap-2 transition-transform hover:translate-y-[-2px]">
             <Banknote size={32} /> Withdraw to Bank

@@ -68,8 +68,33 @@ const getMerchantCustomers = async (req, res) => {
   }
 };
 
+const getCommunityFundBalance = async (req, res) => {
+  try {
+    const communityFundUser = await db.findUserByHandle("@communityfund");
+    if (!communityFundUser) {
+      return res.status(404).json({ error: "Community fund user not found." });
+    }
+    const balanceResponse = await rapyd.getBalance(communityFundUser.id);
+    const tokens = balanceResponse?.data?.tokens;
+    let balance = 0;
+    if (tokens && Array.isArray(tokens) && tokens.length > 0) {
+      const zarToken = tokens.find(
+        (token) => token.name && token.name.toUpperCase() === "L ZAR COIN"
+      );
+      if (zarToken && zarToken.balance) {
+        balance = parseFloat(zarToken.balance);
+      }
+    }
+    res.json({ balance });
+  } catch (error) {
+    console.error("Error fetching community fund balance:", error);
+    res.status(500).json({ error: "Failed to fetch community fund balance" });
+  }
+};
+
 module.exports = {
   getOverviewStats,
   getMerchantTransactions,
   getMerchantCustomers,
+  getCommunityFundBalance,
 };
