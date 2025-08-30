@@ -6,7 +6,7 @@ const { executeTransfer } = require("./transaction.controller");
 const handleIncomingMessage = async (req, res) => {
   // Assuming the webhook payload looks like: { from: '27821234567', text: '...' }
   const { from, text } = req.body;
-  const message = text.trim().toLowerCase();
+  const message = text.trim();
 
   const sender = await db.findUserByWhatsapp(from);
   if (!sender) {
@@ -73,7 +73,7 @@ if (message === "balance" || message === "bal") {
   }
 
   // 2. QR Code Payment: "pay charge_12345"
-  const paymentMatch = message.match(/^pay\s+([\w-]+)/); // Simplified regex
+  const paymentMatch = message.match(/^pay\s+([\w-]+)/i); // Simplified regex
   if (paymentMatch) {
     const chargeId = paymentMatch[1];
 
@@ -81,7 +81,12 @@ if (message === "balance" || message === "bal") {
       // --- STEP 1: VALIDATE THE CHARGE WITH RAPYD API ---
       console.log(`Validating charge ID: ${chargeId}`);
       const chargeResponse = await rapyd.getCharge(chargeId);
-      const charge = chargeResponse.data; // The charge object from Rapyd
+
+      // --- ADD THIS CRITICAL DEBUGGING LOG ---
+      //console.log("Full Rapyd GetCharge Response:",JSON.stringify(chargeResponse.data, null, 2));
+      // -----------------------------------------
+
+      const charge = chargeResponse?.data?.charge; // The charge object from Rapyd
 
       if (!charge || charge.status !== "PENDING") {
         await whatsapp.sendMessage(
