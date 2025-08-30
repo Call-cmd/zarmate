@@ -6,7 +6,17 @@ const { executeTransfer } = require("./transaction.controller");
 const handleIncomingMessage = async (req, res) => {
   // Assuming the webhook payload looks like: { from: '27821234567', text: '...' }
   const { from, text } = req.body;
+
+    // --- ADD THIS DEBUGGING BLOCK ---
+  console.log(`--- RECEIVED WHATSAPP MESSAGE ---`);
+  console.log(`From: ${from}`);
+  console.log(`Original Text: "${text}"`);
+  console.log(`Lowercase Text: "${text.trim().toLowerCase()}"`);
+  console.log(`---------------------------------`);
+  // ---------------------------------
+
   const message = text.trim();
+  const lowerCaseText = text.trim().toLowerCase();
 
   const sender = await db.findUserByWhatsapp(from);
   if (!sender) {
@@ -26,8 +36,7 @@ if (message === "balance" || message === "bal") {
     const tokens = balanceResponse?.data?.tokens;
 
     if (tokens && Array.isArray(tokens) && tokens.length > 0) {
-      // --- THIS IS THE FIX ---
-      // We are now looking for the exact name from the API response.
+      // Find the specific token with the correct name
       const zarToken = tokens.find(
         (token) => token.name && token.name.toUpperCase() === "L ZAR COIN"
       );
@@ -42,6 +51,7 @@ if (message === "balance" || message === "bal") {
     const reply = `Your current ZarMate balance is R${balance.toFixed(2)}.`;
     await whatsapp.sendMessage(from, reply);
 
+
   } catch (error) {
     console.error(`Failed to fetch balance for user ${sender.id}:`, error);
     await whatsapp.sendMessage(
@@ -51,6 +61,56 @@ if (message === "balance" || message === "bal") {
   }
   return res.status(200).send("OK");
 }
+
+  // --- NEW: TRANSACTION HISTORY ENDPOINT ---
+  if (lowerCaseText === "history" || lowerCaseText === "transactions") {
+    try {
+      console.log(`Fetching transaction history for user: ${sender.id}`);
+      const response = await rapyd.getTransactions(sender.id);
+      const transactions = response?.data?.transactions ?? [];
+
+      if (transactions.length === 0) {
+        await whatsapp.sendMessage(from, "You have no transactions yet.");
+        return res.status(200).send("OK");
+      }
+
+      // Format a user-friendly list of the last 5 transactions
+      let reply = "Your recent transactions:\n\n";
+      transactions
+        .slice(0, 5) // Get the 5 most recent transactions
+        .forEach((tx) => {
+          const date = new Date(tx.createdAt).toLocaleDateString("en-ZA");
+          const amount = parseFloat(tx.value).toFixed(2);
+          
+          // Create a simple description based on transaction type
+          let description = "";
+          switch (tx.txType.toUpperCase()) {
+            case "DEBIT":
+              description = `➡️ Sent R${amount}`;
+              break;
+            case "CREDIT":
+              description = `⬅️ Received R${amount}`;
+              break;
+            case "MINT":
+              description = `🎉 Bonus Received R${amount}`;
+              break;
+            default:
+              description = `${tx.txType} R${amount}`;
+          }
+          reply += `${description} on ${date}\n`;
+        });
+
+      await whatsapp.sendMessage(from, reply);
+    } catch (error) {
+      console.error(`Failed to fetch history for user ${sender.id}:`, error);
+      await whatsapp.sendMessage(
+        from,
+        "Sorry, I couldn't fetch your transaction history right now."
+      );
+    }
+    return res.status(200).send("OK");
+  }
+
 
   // --- Command Routing ---
 
