@@ -26,7 +26,8 @@ const sendMessage = async (to, message) => {
       to: to,
       
     });
-    console.log("✅ WhatsApp message sent successfully via Twilio.");
+    console.log(sendMessage.body);
+    //console.log("✅ WhatsApp message sent successfully via Twilio.");
   } catch (error) {
     console.error("❌ Error sending WhatsApp message via Twilio:", error);
   }
