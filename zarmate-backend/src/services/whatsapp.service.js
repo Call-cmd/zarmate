@@ -24,10 +24,9 @@ const sendMessage = async (to, message) => {
 
       // The 'to' number correctly uses the full address that Twilio provides.
       to: to,
-      
+      body: message,
     });
-    console.log(sendMessage.body);
-    //console.log("✅ WhatsApp message sent successfully via Twilio.");
+    console.log("✅ WhatsApp message sent successfully via Twilio.");
   } catch (error) {
     console.error("❌ Error sending WhatsApp message via Twilio:", error);
   }
