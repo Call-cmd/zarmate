@@ -6,7 +6,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: 'ZarMate Merchant Dashboard',
     short_name: 'ZarMate',
     description: 'The merchant dashboard for ZarMate payments and analytics.',
-    start_url: '/dashboard/merchant', // Start users at the dashboard after login
+    start_url: '/', // Start users at the dashboard after login
     display: 'standalone',
     background_color: '#041827', // Your app's background color
     theme_color: '#072f39', // Your app's theme color

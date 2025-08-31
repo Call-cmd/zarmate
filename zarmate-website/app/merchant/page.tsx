@@ -129,22 +129,22 @@ export default function MerchantDashboard() {
             analyticsRes,
           ] = await Promise.all([
             fetch(
-              `process.env.NEXT_PUBLIC_API_URL/api/dashboard/merchant/${merchantId}/overview`,
+              `${process.env.NEXT_PUBLIC_API_URL}/api/dashboard/merchant/${merchantId}/overview`,
               { headers }
             ),
             fetch(
-              `process.env.NEXT_PUBLIC_API_URL/api/dashboard/merchant/${merchantId}/transactions`,
+              `${process.env.NEXT_PUBLIC_API_URL}/api/dashboard/merchant/${merchantId}/transactions`,
               { headers }
             ),
             fetch(
-              `process.env.NEXT_PUBLIC_API_URL/api/dashboard/merchant/${merchantId}/customers`,
+              `${process.env.NEXT_PUBLIC_API_URL}/api/dashboard/merchant/${merchantId}/customers`,
               { headers }
             ),
-            fetch(`process.env.NEXT_PUBLIC_API_URL/api/dashboard/community-fund`, {
+            fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/dashboard/community-fund`, {
               headers,
             }),
             fetch(
-              `process.env.NEXT_PUBLIC_API_URL/api/dashboard/merchant/${merchantId}/analytics`,
+              `${process.env.NEXT_PUBLIC_API_URL}/api/dashboard/merchant/${merchantId}/analytics`,
               { headers }
             ),
           ]);
@@ -182,7 +182,7 @@ export default function MerchantDashboard() {
     if (!user || !token) return;
     setGeneratedCharge(null);
     try {
-      const res = await fetch("process.env.NEXT_PUBLIC_API_URL/api/merchants/charges", {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/merchants/charges`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -223,7 +223,7 @@ export default function MerchantDashboard() {
         code: couponCode,
       };
       const res = await fetch(
-        `process.env.NEXT_PUBLIC_API_URL/api/dashboard/merchant/${user.id}/coupons`,
+        `${process.env.NEXT_PUBLIC_API_URL}/api/dashboard/merchant/${user.id}/coupons`,
         {
           method: "POST",
           headers: {
