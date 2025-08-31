@@ -1,10 +1,12 @@
+// src/services/whatsapp.service.js
+
 const twilio = require("twilio");
 
 const accountSid = process.env.TWILIO_ACCOUNT_SID;
 const authToken = process.env.TWILIO_AUTH_TOKEN;
 const client = twilio(accountSid, authToken);
 
-// Example: "whatsapp:+14155238886"
+// This variable should just be the number, e.g., "+14155238886"
 const twilioWhatsappNumber = process.env.TWILIO_WHATSAPP_NUMBER;
 
 const sendMessage = async (to, message) => {
@@ -15,8 +17,12 @@ const sendMessage = async (to, message) => {
 
   try {
     await client.messages.create({
-      from: `whatsapp:${twilioWhatsappNumber}`,  // ✅ must have prefix
-      to: `whatsapp:${to}`,                      // ✅ must have prefix
+      // --- THIS IS THE FIX FOR THE SANDBOX ---
+      // The 'from' number for the Sandbox must NOT have the 'whatsapp:' prefix.
+      from: twilioWhatsappNumber,
+
+      // The 'to' number correctly uses the full address that Twilio provides.
+      to: to,
       body: message,
     });
     console.log("✅ WhatsApp message sent successfully via Twilio.");
