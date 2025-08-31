@@ -12,6 +12,7 @@ const twilioWhatsappNumber = process.env.TWILIO_WHATSAPP_NUMBER;
 const sendMessage = async (to, message) => {
   console.log("--- SENDING REAL WHATSAPP MESSAGE ---");
   console.log(`To: ${to}`);
+  console.log(`From (Twilio Sandbox Number): ${twilioWhatsappNumber}`);
   console.log(`Message: ${message}`);
   console.log("---------------------------------");
 
