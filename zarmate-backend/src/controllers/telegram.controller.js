@@ -53,13 +53,13 @@ const handleIncomingMessage = async (req, res) => {
       }
   
       const reply = `Your current ZarMate balance is R${balance.toFixed(2)}.`;
-      await telegram.sendMessage(from, reply);
+      await telegram.sendMessage(fromChatId, reply);
   
   
     } catch (error) {
       console.error(`Failed to fetch balance for user ${sender.id}:`, error);
       await telegram.sendMessage(
-        from,
+        fromChatId,
         "Sorry, I couldn't fetch your balance right now. Please try again later."
       );
     }
@@ -74,7 +74,7 @@ const handleIncomingMessage = async (req, res) => {
       const transactions = response?.data?.transactions ?? [];
 
       if (transactions.length === 0) {
-        await telegram.sendMessage(from, "You have no transactions yet.");
+        await telegram.sendMessage(fromChatId, "You have no transactions yet.");
         return res.status(200).send("OK");
       }
 
@@ -104,11 +104,11 @@ const handleIncomingMessage = async (req, res) => {
           reply += `${description} on ${date}\n`;
         });
 
-      await telegram.sendMessage(from, reply);
+      await telegram.sendMessage(fromChatId, reply);
     } catch (error) {
       console.error(`Failed to fetch history for user ${sender.id}:`, error);
       await telegram.sendMessage(
-        from,
+        fromChatId,
         "Sorry, I couldn't fetch your transaction history right now."
       );
     }
@@ -122,7 +122,7 @@ if (claimMatch) {
 
   try {
     console.log(`User ${sender.id} attempting to claim coupon code: ${couponCode}`);
-    await telegram.sendMessage(from, `Checking code ${couponCode}...`);
+    await telegram.sendMessage(fromChatId, `Checking code ${couponCode}...`);
 
     // 1. Get all available coupons (this part works and proves the coupon is real)
     const couponsResponse = await rapyd.getAllCoupons();
@@ -130,7 +130,7 @@ if (claimMatch) {
     const targetCoupon = allCoupons.find(c => c.code.toUpperCase() === couponCode);
 
     if (!targetCoupon) {
-      await telegram.sendMessage(from, `Sorry, the coupon code "${couponCode}" is not valid.`);
+      await telegram.sendMessage(fromChatId, `Sorry, the coupon code "${couponCode}" is not valid.`);
       return res.status(200).send("OK");
     }
 
@@ -149,13 +149,13 @@ if (claimMatch) {
     });
 
     console.log(`Successfully minted R${couponValue} reward for user ${sender.id}`);
-    await telegram.sendMessage(from, `✅ Success! You have claimed the "${targetCoupon.title}" coupon. R${couponValue.toFixed(2)} has been added to your balance.`);
+    await telegram.sendMessage(fromChatId, `✅ Success! You have claimed the "${targetCoupon.title}" coupon. R${couponValue.toFixed(2)} has been added to your balance.`);
     // --- END OF WORKAROUND ---
 
   } catch (error) {
     console.error(`Failed to claim coupon for user ${sender.id}:`, error.response ? error.response.data : error);
     const errorMessage = "An unexpected error occurred while claiming your coupon.";
-    await telegram.sendMessage(from, `❌ Claim failed. ${errorMessage}`);
+    await telegram.sendMessage(fromChatId, `❌ Claim failed. ${errorMessage}`);
   }
   return res.status(200).send("OK");
 }
@@ -172,12 +172,12 @@ if (claimMatch) {
     const recipient = db.findUserByHandle(recipientHandle);
 
     if (!recipient) {
-      await telegram.sendMessage(from, `Sorry, I couldn't find user ${recipientHandle}.`);
+      await telegram.sendMessage(fromChatId, `Sorry, I couldn't find user ${recipientHandle}.`);
       return res.status(200).send("OK");
     }
 
     // Respond immediately and start the job in the background
-    await telegram.sendMessage(from, `Processing your transfer of R${amount} to ${recipient.handle}...`);
+    await telegram.sendMessage(fromChatId, `Processing your transfer of R${amount} to ${recipient.handle}...`);
     executeTransfer(sender, recipient, amount, `Transfer from ${sender.handle}`);
     return res.status(200).send("OK");
   }
@@ -200,7 +200,7 @@ if (claimMatch) {
 
       if (!charge || charge.status !== "PENDING") {
         await telegram.sendMessage(
-          from,
+          fromChatId,
           "Sorry, that payment code is invalid or has already been paid."
         );
         return res.status(200).send("OK");
@@ -211,13 +211,13 @@ if (claimMatch) {
       if (!merchant) {
         // This is an internal error, the merchant should always exist
         console.error(`Could not find merchant with ID: ${charge.userId}`);
-        await telegram.sendMessage(from, "Sorry, an error occurred with the merchant's account.");
+        await telegram.sendMessage(fromChatId, "Sorry, an error occurred with the merchant's account.");
         return res.status(200).send("OK");
       }
 
       // --- STEP 2: EXECUTE THE TRANSFER (already uses Rapyd API) ---
       await telegram.sendMessage(
-        from,
+        fromChatId,
         `Processing your payment of R${charge.amount} for "${charge.note}"...`
       );
 
@@ -229,16 +229,16 @@ if (claimMatch) {
     } catch (error) {
       console.error("Error during payment processing:", error.response ? error.response.data : error);
       if (error.response && error.response.status === 404) {
-        await telegram.sendMessage(from, "Sorry, that payment code is invalid.");
+        await telegram.sendMessage(fromChatId, "Sorry, that payment code is invalid.");
       } else {
-        await telegram.sendMessage(from, "Sorry, an error occurred while processing your payment.");
+        await telegram.sendMessage(fromChatId, "Sorry, an error occurred while processing your payment.");
       }
       return res.status(200).send("OK");
     }
   }
 
   // Default response if no command is matched
-  await telegram.sendMessage(from, "Sorry, I didn't understand that. Try 'send R50 to @handle' or 'balance'.");
+  await telegram.sendMessage(fromChatId, "Sorry, I didn't understand that. Try 'send R50 to @handle' or 'balance'.");
   res.status(200).send("OK");
 };
 
