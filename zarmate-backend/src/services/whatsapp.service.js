@@ -13,6 +13,7 @@ const sendMessage = async (to, message) => {
   console.log("--- SENDING REAL WHATSAPP MESSAGE ---");
   console.log(`To: ${to}`);
   console.log(`From (Twilio Sandbox Number): ${twilioWhatsappNumber}`);
+  console.log(`Full Payload:`, { from: twilioWhatsappNumber, to, body: message });
   console.log(`Message: ${message}`);
   console.log("---------------------------------");
 
