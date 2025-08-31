@@ -24,4 +24,5 @@ module.exports = {
   createCoupon: (userId, data) => client.post(`/coupons/${userId}`, data),
   getAllCoupons: () => client.get("/coupons"),
   claimCoupon: (userId, data) => client.patch(`/coupons/claim/${userId}`, data),
+  findRecipient: (identifier) => client.get(`/recipient/${identifier}`),
 };

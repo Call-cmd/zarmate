@@ -70,10 +70,15 @@ const getMerchantCustomers = async (req, res) => {
 
 const getCommunityFundBalance = async (req, res) => {
   try {
-    const communityFundUser = await db.findUserByHandle("@communityfund");
+    // Find the community fund user directly from the Rapyd API via its email.
+    const fundUserResponse = await rapyd.findRecipient("fund@zarmate.community");
+    const communityFundUser = fundUserResponse.data;
+
     if (!communityFundUser) {
-      return res.status(404).json({ error: "Community fund user not found." });
+      return res.status(404).json({ error: "Community fund user not found in Rapyd API." });
     }
+
+    // Now use the ID from the Rapyd response to get the balance
     const balanceResponse = await rapyd.getBalance(communityFundUser.id);
     const tokens = balanceResponse?.data?.tokens;
     let balance = 0;
@@ -87,7 +92,7 @@ const getCommunityFundBalance = async (req, res) => {
     }
     res.json({ balance });
   } catch (error) {
-    console.error("Error fetching community fund balance:", error);
+    console.error("Error fetching community fund balance:", error.response ? error.response.data : error);
     res.status(500).json({ error: "Failed to fetch community fund balance" });
   }
 };
