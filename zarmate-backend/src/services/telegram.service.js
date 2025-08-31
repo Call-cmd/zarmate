@@ -21,7 +21,6 @@ const sendMessage = async (chatId, message) => {
       console.error(`Status: ${error.response.status}`);
       console.error(`Data: ${error.response.data}`);
     }
-    // Optional: Retry logic could be added here
     throw error;
   }
 };
