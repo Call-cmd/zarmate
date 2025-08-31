@@ -19,11 +19,12 @@ const sendMessage = async (to, message) => {
     await client.messages.create({
       // --- THIS IS THE FIX FOR THE SANDBOX ---
       // The 'from' number for the Sandbox must NOT have the 'whatsapp:' prefix.
+      body: message,
       from: twilioWhatsappNumber,
 
       // The 'to' number correctly uses the full address that Twilio provides.
       to: to,
-      body: message,
+      
     });
     console.log("✅ WhatsApp message sent successfully via Twilio.");
   } catch (error) {
