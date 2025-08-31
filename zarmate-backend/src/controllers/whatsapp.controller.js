@@ -14,10 +14,13 @@ const handleIncomingMessage = async (req, res) => {
   console.log(`Full Payload:`, req.body);
   console.log(`---------------------------`);
 
+  // Normalize the phone number by removing the "whatsapp:" prefix.
+  const normalizedFrom = from.replace("whatsapp:", "");
+
   const message = text.trim();
   const lowerCaseText = text.trim().toLowerCase();
 
-  const sender = await db.findUserByWhatsapp(from);
+  const sender = await db.findUserByWhatsapp(normalizedFrom);
   if (!sender) {
     // We can now safely send a message back if the user isn't found
     await whatsapp.sendMessage(from, "Sorry, your number is not registered.");
