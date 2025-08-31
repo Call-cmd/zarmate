@@ -3,34 +3,44 @@
 const twilio = require("twilio");
 
 const accountSid = process.env.TWILIO_ACCOUNT_SID;
-const authToken = process.env.TWILIO_AUTH_TOKEN;
-const client = twilio(accountSid, authToken);
+const authToken  = process.env.TWILIO_AUTH_TOKEN;
+const client     = twilio(accountSid, authToken);
 
-// This variable should just be the number, e.g., "+14155238886"
+// MUST be in the Twilio/WhatsApp address format, e.g. "whatsapp:+14155238886"
 const twilioWhatsappNumber = process.env.TWILIO_WHATSAPP_NUMBER;
 
+if (!accountSid || !authToken || !twilioWhatsappNumber) {
+  console.warn("Twilio env vars missing. Check TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_WHATSAPP_NUMBER.");
+}
+
+/**
+ * to: must be "whatsapp:+<E.164 number>" e.g. "whatsapp:+27831234567"
+ * message: string
+ */
 const sendMessage = async (to, message) => {
-  console.log("--- SENDING REAL WHATSAPP MESSAGE ---");
+  console.log("--- SENDING WHATSAPP MESSAGE ---");
   console.log(`To: ${to}`);
-  console.log(`From (Twilio Sandbox Number): ${twilioWhatsappNumber}`);
-  console.log(`Full Payload:`, { from: twilioWhatsappNumber, to, body: message });
-  console.log(`Message: ${message}`);
+  console.log(`From: ${twilioWhatsappNumber}`);
+  console.log(`Message preview: ${message}`);
   console.log("---------------------------------");
 
-  try {
-    await client.messages.create({
-      // --- THIS IS THE FIX FOR THE SANDBOX ---
-      // The 'from' number for the Sandbox must NOT have the 'whatsapp:' prefix.
-      body: message,
-      from: twilioWhatsappNumber,
+  if (!to || !message) {
+    throw new Error("sendMessage requires both 'to' and 'message' parameters.");
+  }
 
-      // The 'to' number correctly uses the full address that Twilio provides.
-      to: to,
-      body: message,
+  try {
+    const msg = await client.messages.create({
+      from: twilioWhatsappNumber, // e.g. "whatsapp:+14155238886"
+      to: to,                     // e.g. "whatsapp:+27831234567"
+      body: message
     });
-    console.log("✅ WhatsApp message sent successfully via Twilio.");
+
+    console.log("✅ WhatsApp message sent. SID:", msg.sid);
+    return msg; // useful for tests / further handling
   } catch (error) {
-    console.error("❌ Error sending WhatsApp message via Twilio:", error);
+    // log more detailed info for debugging
+    console.error("❌ Error sending WhatsApp message via Twilio:", error.message || error);
+    throw error; // rethrow if caller needs to handle it
   }
 };
 
