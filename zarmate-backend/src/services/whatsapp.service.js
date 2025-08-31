@@ -1,17 +1,13 @@
+
 const twilio = require("twilio");
 
-// Initialize the Twilio client with your credentials
 const accountSid = process.env.TWILIO_ACCOUNT_SID;
 const authToken = process.env.TWILIO_AUTH_TOKEN;
 const client = twilio(accountSid, authToken);
 
+// This variable should just be the number, e.g., "+14155238886"
 const twilioWhatsappNumber = process.env.TWILIO_WHATSAPP_NUMBER;
 
-/**
- * Sends a real WhatsApp message using the Twilio API.
- * @param {string} to - The recipient's full WhatsApp number (e.g., 'whatsapp:+27786280415')
- * @param {string} message - The text message to send.
- */
 const sendMessage = async (to, message) => {
   console.log("--- SENDING REAL WHATSAPP MESSAGE ---");
   console.log(`To: ${to}`);
@@ -20,8 +16,12 @@ const sendMessage = async (to, message) => {
 
   try {
     await client.messages.create({
-      from: `whatsapp:${twilioWhatsappNumber}`, // Your Twilio Sandbox number
-      to: to, // The user's number (already includes the 'whatsapp:' prefix)
+      // --- THIS IS THE FIX ---
+      // The 'from' number should NOT have the 'whatsapp:' prefix.
+      from: twilioWhatsappNumber,
+
+      // The 'to' number correctly uses the full address from Twilio.
+      to: to,
       body: message,
     });
     console.log("✅ WhatsApp message sent successfully via Twilio.");
