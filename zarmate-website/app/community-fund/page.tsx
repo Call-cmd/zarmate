@@ -32,7 +32,7 @@ export default function CommunityFundPage() {
     async function fetchFundBalance() {
       try {
         const res = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/api/dashboard/community-fund`
+          `${process.env.NEXT_PUBLIC_API_URL}api/dashboard/community-fund`
         );
         if (!res.ok) {
           throw new Error("Could not fetch fund data.");
