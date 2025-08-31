@@ -26,6 +26,8 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+app.use(express.urlencoded({ extended: true }));
+
 // 3. DEFINE API ROUTES
 app.use("/api/merchants", merchantRoutes);
 app.use("/api/whatsapp", whatsappRoutes);

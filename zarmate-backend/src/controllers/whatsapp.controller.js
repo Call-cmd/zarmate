@@ -5,15 +5,14 @@ const { executeTransfer } = require("./transaction.controller");
 
 const handleIncomingMessage = async (req, res) => {
   // Assuming the webhook payload looks like: { from: '27821234567', text: '...' }
-  const { from, text } = req.body;
+  const { From: from, Body: text } = req.body;
 
-    // --- ADD THIS DEBUGGING BLOCK ---
-  console.log(`--- RECEIVED WHATSAPP MESSAGE ---`);
+  // Log the incoming message to see what Twilio is sending
+  console.log(`--- LIVE TWILIO MESSAGE ---`);
   console.log(`From: ${from}`);
-  console.log(`Original Text: "${text}"`);
-  console.log(`Lowercase Text: "${text.trim().toLowerCase()}"`);
-  console.log(`---------------------------------`);
-  // ---------------------------------
+  console.log(`Body: ${text}`);
+  console.log(`Full Payload:`, req.body);
+  console.log(`---------------------------`);
 
   const message = text.trim();
   const lowerCaseText = text.trim().toLowerCase();
