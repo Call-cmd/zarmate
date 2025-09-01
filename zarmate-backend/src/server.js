@@ -20,6 +20,14 @@ console.log(
   process.env.RAPYD_BASE_URL ? "Loaded" : "NOT FOUND"
 );
 
+console.log(
+  "TELEGRAM_BOT_TOKEN:",
+  process.env.TELEGRAM_BOT_TOKEN ? 
+    `Loaded (starts with ${process.env.TELEGRAM_BOT_TOKEN.substring(0, 5)}...` +
+    `${process.env.TELEGRAM_BOT_TOKEN.substring(process.env.TELEGRAM_BOT_TOKEN.length - 5)})` : 
+    "NOT FOUND"
+);
+
 // 1. CREATE THE EXPRESS APP INSTANCE
 const app = express();
 
