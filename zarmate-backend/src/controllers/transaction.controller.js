@@ -2,6 +2,14 @@ const rapyd = require("../../common/rapyd-client");
 const db = require("../services/database.service");
 const whatsapp = require("../services/whatsapp.service");
 
+// Ensure the number has the proper prefix
+function formatWhatsappNumber(num) {
+  if (!num.startsWith("whatsapp:")) {
+    return `whatsapp:${num}`;
+  }
+  return num;
+}
+
 async function executeTransfer(
   sender,
   recipient,
@@ -15,6 +23,7 @@ async function executeTransfer(
   const roundedUpAmount = Math.ceil(originalAmount);
   const contribution = roundedUpAmount - originalAmount;
   // --- END NEW LOGIC ---
+
 
   try {
     console.log(
@@ -75,12 +84,12 @@ async function executeTransfer(
 
     // Notify the user of the full amount they paid
     await whatsapp.sendMessage(
-      sender.whatsapp_number,
+      formatWhatsappNumber(sender.whatsapp_number),
       `✅ Transfer complete! You paid R${roundedUpAmount.toFixed(2)} to ${recipient.handle}. Thank you for your R${contribution.toFixed(2)} contribution to the community fund!`
     );
     // The merchant is notified of the original amount
     await whatsapp.sendMessage(
-      recipient.whatsapp_number,
+      formatWhatsappNumber(recipient.whatsapp_number),
       `🎉 You received R${originalAmount.toFixed(2)} from ${sender.handle}!`
     );
   } catch (error) {
@@ -91,7 +100,7 @@ async function executeTransfer(
 
     // --- THIS IS THE FIX ---
     await whatsapp.sendMessage(
-      sender.whatsapp_number,
+      formatWhatsappNumber(sender.whatsapp_number)
       `❌ Your transfer of R${amount.toFixed(2)} failed. Please try again later.`
     );
   }

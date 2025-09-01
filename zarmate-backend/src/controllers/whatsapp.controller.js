@@ -163,22 +163,43 @@ if (claimMatch) {
   // --- Command Routing ---
 
   // 1. User-to-User Transfer: "send R50 to @lebo"
-  const transferMatch = message.match(/^send\s+r?(\d+(\.\d{1,2})?)\s+to\s+(@\w+)/);
-  if (transferMatch) {
-    const amount = parseFloat(transferMatch[1]);
-    const recipientHandle = transferMatch[3];
-    const recipient = db.findUserByHandle(recipientHandle);
+const transferMatch = message.match(/^send\s+r?(\d+(?:\.\d{1,2})?)\s+to\s+(@?\S+)/i);
+if (transferMatch) {
+  const amount = parseFloat(transferMatch[1]);
+  let recipientInput = transferMatch[2];
 
-    if (!recipient) {
-      await whatsapp.sendMessage(from, `Sorry, I couldn't find user ${recipientHandle}.`);
-      return res.status(200).send("OK");
-    }
+  // Normalize handle (remove @ if present)
+  if (recipientInput.startsWith("@")) {
+    recipientInput = recipientInput.substring(1);
+  }
 
-    // Respond immediately and start the job in the background
-    await whatsapp.sendMessage(from, `Processing your transfer of R${amount} to ${recipient.handle}...`);
-    executeTransfer(sender, recipient, amount, `Transfer from ${sender.handle}`);
+  let recipient;
+
+  // If input looks like a phone number → search by WhatsApp
+  if (/^\+?\d+$/.test(recipientInput)) {
+    // Normalize phone number (strip + if needed)
+    const phone = recipientInput.replace(/^\+/, "");
+    recipient = await db.findUserByWhatsapp(phone);
+  } else {
+    // Otherwise treat as a handle
+    recipient = await db.findUserByHandle(recipientInput);
+  }
+
+  if (!recipient) {
+    await whatsapp.sendMessage(from, `❌ Sorry, I couldn't find user "${recipientInput}".`);
     return res.status(200).send("OK");
   }
+
+  // Respond immediately and process transfer in background
+  await whatsapp.sendMessage(
+    from,
+    `Processing your transfer of R${amount.toFixed(2)} to @${recipient.handle}...`
+  );
+
+  executeTransfer(sender, recipient, amount, `Transfer from ${sender.handle}`);
+  return res.status(200).send("OK");
+}
+
 
   // 2. QR Code Payment: "pay charge_12345"
   const paymentMatch = message.match(/^pay\s+([\w-]+)/i); // Simplified regex
