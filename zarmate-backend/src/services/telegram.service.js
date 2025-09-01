@@ -1,128 +1,133 @@
-const axios = require("axios");
+// telegram.controller.js - Webhook handler
+const express = require('express');
+const { sendMessage } = require('../services/telegram.service');
 
-const botToken = process.env.TELEGRAM_BOT_TOKEN;
-const telegramApiUrl = `https://api.telegram.org/bot${botToken}`;
+// Middleware to validate Telegram webhook
+const validateTelegramWebhook = (req, res, next) => {
+  try {
+    // Basic validation
+    if (!req.body || !req.body.message) {
+      console.log("⚠️ Received webhook without message, ignoring");
+      return res.status(200).send('OK'); // Always return 200 to Telegram
+    }
+    next();
+  } catch (error) {
+    console.error("❌ Webhook validation error:", error);
+    res.status(200).send('OK'); // Still return 200 to prevent Telegram retries
+  }
+};
 
-// Create axios instance with timeout configuration
-const telegramAPI = axios.create({
-  timeout: 15000, // 15 seconds timeout
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
+const handleIncomingMessage = async (req, res) => {
+  try {
+    console.log("📨 Received Telegram webhook:", JSON.stringify(req.body, null, 2));
+    
+    const { message } = req.body;
+    
+    // Extract message details safely
+    const chatId = message?.chat?.id;
+    const messageText = message?.text;
+    const userId = message?.from?.id;
+    const username = message?.from?.username;
+    
+    if (!chatId) {
+      console.error("❌ No chat ID found in message");
+      return res.status(200).send('OK');
+    }
 
-// Helper function to delay between retries
-const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+    console.log(`📩 Message from ${username || 'Unknown'} (${userId}): "${messageText}"`);
 
-const sendMessage = async (chatId, message, retries = 3) => {
-  for (let attempt = 1; attempt <= retries; attempt++) {
-    try {
-      console.log(`📤 Attempting to send Telegram message (attempt ${attempt}/${retries})`);
-      
-      const response = await telegramAPI.post(`${telegramApiUrl}/sendMessage`, {
-        chat_id: chatId,
-        text: message,
+    // Respond to Telegram immediately to prevent timeout
+    res.status(200).send('OK');
+
+    // Process the message asynchronously (don't await here)
+    processMessageAsync(chatId, messageText, userId, username)
+      .catch(error => {
+        console.error("❌ Error processing message async:", error.message);
       });
 
-      if (response.data.ok) {
-        console.log(`✅ Telegram message sent successfully to chat ID: ${chatId}`);
-        return response.data;
-      } else {
-        console.error(`❌ Telegram API returned error: ${response.data.description}`);
-        throw new Error(`Telegram API error: ${response.data.description}`);
-      }
-    } catch (error) {
-      const isLastAttempt = attempt === retries;
-      const isTimeoutError = error.code === 'ETIMEDOUT' || error.code === 'ECONNABORTED';
-      
-      console.error(`❌ Error sending Telegram message (attempt ${attempt}/${retries}):`, error.message);
-      
-      if (error.response) {
-        console.error(`Status: ${error.response.status}`);
-        console.error(`Data:`, error.response.data);
-        
-        // Don't retry for certain HTTP errors
-        if (error.response.status === 400 || error.response.status === 401 || error.response.status === 403) {
-          throw error;
-        }
-      }
-      
-      if (isLastAttempt) {
-        console.error(`❌ Failed to send Telegram message after ${retries} attempts`);
-        throw error;
-      }
-      
-      if (isTimeoutError) {
-        const backoffDelay = Math.min(1000 * Math.pow(2, attempt - 1), 10000); // Exponential backoff, max 10s
-        console.log(`⏳ Timeout error, retrying in ${backoffDelay}ms...`);
-        await delay(backoffDelay);
-      } else {
-        // For other errors, wait a shorter time
-        await delay(1000);
-      }
-    }
+  } catch (error) {
+    console.error("❌ Error in webhook handler:", error.message);
+    console.error("Stack:", error.stack);
+    
+    // Always return 200 to Telegram to prevent retries
+    res.status(200).send('OK');
   }
 };
 
-// Alternative method with manual timeout handling
-const sendMessageWithManualTimeout = async (chatId, message, timeoutMs = 15000) => {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-  
+// Process message without blocking the webhook response
+const processMessageAsync = async (chatId, messageText, userId, username) => {
   try {
-    const response = await axios.post(`${telegramApiUrl}/sendMessage`, {
-      chat_id: chatId,
-      text: message,
-    }, {
-      signal: controller.signal,
-      headers: {
-        'Content-Type': 'application/json',
-      },
+    // Add your bot logic here
+    let responseMessage;
+    
+    if (messageText === '/start') {
+      responseMessage = `Hello ${username || 'there'}! Welcome to the bot.`;
+    } else if (messageText === '/help') {
+      responseMessage = 'Here are the available commands:\n/start - Start the bot\n/help - Show this help';
+    } else {
+      responseMessage = `You said: "${messageText}". I'm processing this...`;
+    }
+
+    // Send response with retry logic (from your improved service)
+    await sendMessage(chatId, responseMessage, {
+      retries: 3,
+      useAlternatives: true,
+      runDiagnosticsOnFailure: false // Don't run diagnostics for each message
     });
 
-    clearTimeout(timeoutId);
-
-    if (response.data.ok) {
-      console.log(`✅ Telegram message sent successfully to chat ID: ${chatId}`);
-      return response.data;
-    } else {
-      console.error(`❌ Telegram API returned error: ${response.data.description}`);
-      throw new Error(`Telegram API error: ${response.data.description}`);
-    }
   } catch (error) {
-    clearTimeout(timeoutId);
+    console.error("❌ Error processing message:", error.message);
     
-    if (error.name === 'AbortError') {
-      throw new Error(`Request timed out after ${timeoutMs}ms`);
+    // Try to send an error message to user (optional)
+    try {
+      await sendMessage(chatId, "Sorry, I'm having technical difficulties. Please try again later.", {
+        retries: 1,
+        useAlternatives: false,
+        runDiagnosticsOnFailure: false
+      });
+    } catch (sendError) {
+      console.error("❌ Failed to send error message:", sendError.message);
     }
-    
-    console.error("❌ Error sending Telegram message:", error.message);
-    if (error.response) {
-      console.error(`Status: ${error.response.status}`);
-      console.error(`Data:`, error.response.data);
-    }
-    throw error;
   }
 };
 
-// Health check function to test connectivity
-const testConnection = async () => {
+// Route setup
+const router = express.Router();
+
+// Webhook endpoint
+router.post('/webhook', 
+  express.json({ limit: '10mb' }), // Parse JSON body
+  validateTelegramWebhook,
+  handleIncomingMessage
+);
+
+// Health check endpoint
+router.get('/health', (req, res) => {
+  res.json({ 
+    status: 'OK', 
+    timestamp: new Date().toISOString(),
+    service: 'telegram-webhook'
+  });
+});
+
+// Test endpoint to check webhook setup
+router.get('/webhook-info', async (req, res) => {
   try {
-    const response = await telegramAPI.get(`${telegramApiUrl}/getMe`);
-    if (response.data.ok) {
-      console.log("✅ Telegram Bot API connection successful");
-      console.log(`Bot info: ${response.data.result.first_name} (@${response.data.result.username})`);
-      return true;
-    }
-    return false;
+    const axios = require('axios');
+    const botToken = process.env.TELEGRAM_BOT_TOKEN;
+    
+    const response = await axios.get(`https://api.telegram.org/bot${botToken}/getWebhookInfo`);
+    res.json({
+      webhookInfo: response.data.result,
+      environment: {
+        nodeEnv: process.env.NODE_ENV,
+        port: process.env.PORT,
+        timestamp: new Date().toISOString()
+      }
+    });
   } catch (error) {
-    console.error("❌ Failed to connect to Telegram API:", error.message);
-    return false;
+    res.status(500).json({ error: error.message });
   }
-};
+});
 
-module.exports = { 
-  sendMessage, 
-  sendMessageWithManualTimeout, 
-  testConnection 
-};
+module.exports = router;
