@@ -163,42 +163,43 @@ if (claimMatch) {
   // --- Command Routing ---
 
   // 1. User-to-User Transfer: "send R50 to @lebo"
-const transferMatch = message.match(/^send\s+r?(\d+(?:\.\d{1,2})?)\s+to\s+(@?\S+)/i);
+const transferMatch = message.match(/^send\s+r?(\d+(?:\.\d{1,2})?)\s+to\s+(\S+)/i);
 if (transferMatch) {
   const amount = parseFloat(transferMatch[1]);
-  let recipientInput = transferMatch[2];
-
-  // Normalize handle (remove @ if present)
-  if (recipientInput.startsWith("@")) {
-    recipientInput = recipientInput.substring(1);
-  }
+  const recipientInput = transferMatch[2];
 
   let recipient;
 
-  // If input looks like a phone number → search by WhatsApp
-  if (/^\+?\d+$/.test(recipientInput)) {
-    // Normalize phone number (strip + if needed)
+  if (recipientInput.startsWith("@")) {
+    // 🔎 Handle lookup (keep the @)
+    recipient = await db.findUserByHandle(recipientInput);
+  } else if (/^\+?\d+$/.test(recipientInput)) {
+    // 🔎 Phone number lookup (normalize by stripping +)
     const phone = recipientInput.replace(/^\+/, "");
     recipient = await db.findUserByWhatsapp(phone);
-  } else {
-    // Otherwise treat as a handle
-    recipient = await db.findUserByHandle(recipientInput);
   }
 
   if (!recipient) {
-    await whatsapp.sendMessage(from, `❌ Sorry, I couldn't find user "${recipientInput}".`);
+    await whatsapp.sendMessage(
+      from,
+      `❌ Sorry, I couldn't find user "${recipientInput}".`
+    );
     return res.status(200).send("OK");
   }
 
-  // Respond immediately and process transfer in background
+  // Reply to sender right away
   await whatsapp.sendMessage(
     from,
-    `Processing your transfer of R${amount.toFixed(2)} to @${recipient.handle}...`
+    `Processing your transfer of R${amount.toFixed(2)} to ${
+      recipient.handle || recipient.whatsapp
+    }...`
   );
 
+  // Run the transfer in the background
   executeTransfer(sender, recipient, amount, `Transfer from ${sender.handle}`);
   return res.status(200).send("OK");
 }
+
 
 
   // 2. QR Code Payment: "pay charge_12345"
