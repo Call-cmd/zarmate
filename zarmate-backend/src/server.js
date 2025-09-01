@@ -6,6 +6,9 @@ const express = require("express");
 const cors = require("cors");
 const { initializeDatabase } = require("./services/database.service");
 
+const { setDefaultResultOrder } = require("node:dns");
+setDefaultResultOrder("ipv4first");
+
 // --- Routers ---
 const merchantRoutes = require("./api/merchants.routes");
 const whatsappRoutes = require("./api/whatsapp.routes");
@@ -13,18 +16,18 @@ const userRoutes = require("./api/users.routes");
 const dashboardRoutes = require("./api/dashboard.routes");
 const authRoutes = require("./api/auth.routes");
 const telegramRoutes = require("./api/telegram.routes");
-const { testConnection } = require("./services/telegram.service"); // <--- Import testConnection
 
 console.log("RAPYD_API_KEY:", process.env.RAPYD_API_KEY ? "Loaded" : "NOT FOUND");
 console.log(
   "RAPYD_BASE_URL:",
   process.env.RAPYD_BASE_URL ? "Loaded" : "NOT FOUND"
 );
+
 console.log(
   "TELEGRAM_BOT_TOKEN:",
-  process.env.TELEGRAM_BOT_TOKEN ?
+  process.env.TELEGRAM_BOT_TOKEN ? 
     `Loaded (starts with ${process.env.TELEGRAM_BOT_TOKEN.substring(0, 5)}...` +
-    `${process.env.TELEGRAM_BOT_TOKEN.substring(process.env.TELEGRAM_BOT_TOKEN.length - 5)})` :
+    `${process.env.TELEGRAM_BOT_TOKEN.substring(process.env.TELEGRAM_BOT_TOKEN.length - 5)})` : 
     "NOT FOUND"
 );
 
@@ -56,14 +59,4 @@ app.listen(PORT, async () => {
   console.log(`ZarMate backend running on port ${PORT}`);
   await initializeDatabase();
   console.log("Database initialized. Ready for new user registrations.");
-
-  // Add this call to testConnection during startup
-  try {
-    await testConnection();
-    console.log("✅ Telegram bot test connection successful during startup.");
-  } catch (error) {
-    console.error("❌ Telegram bot test connection failed during startup:", error.message);
-    // You might want to consider exiting the process here if Telegram is critical
-    // process.exit(1);
-  }
 });
