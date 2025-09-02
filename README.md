@@ -89,7 +89,6 @@ Integrations:
 
 	- Financial Core: Rapyd API (Hackathon Provided)
 	- Messaging: Twilio API for WhatsApp
-(Optional but highly recommended: Create a simple diagram showing Frontend -> Backend -> Database/Rapyd/Twilio and add it here)
 
 
 ---
